@@ -3,8 +3,6 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
-# One-command launcher for macOS/Linux.
-# Docker mode is the recommended reproducible setup.
 if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
   echo "[FinFlow] Docker найден. Запуск PostgreSQL + backend + frontend..."
   docker compose up --build
