@@ -1,0 +1,80 @@
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: finflow-postgres
+    environment:
+      POSTGRES_DB: finance_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1111
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d finance_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: finflow-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: finflow-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finance_db
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 1111
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SERVER_PORT: 8443
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: /app/certs/keystore.p12
+      SERVER_SSL_KEY_STORE_PASSWORD: changeit
+      SERVER_SSL_KEY_STORE_TYPE: PKCS12
+      SERVER_SSL_KEY_ALIAS: finflow
+    ports:
+      - "8443:8443"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: finflow-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+  backup:
+    image: postgres:18
+    container_name: finflow-backup
+    environment:
+      PGPASSWORD: 1111
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >-
+      sh -c 'while true; do pg_dump -h postgres -U postgres -d finance_db -Fc -f /backups/finance_db_$$(date +%Y%m%d_%H%M%S).dump; find /backups -type f -mtime +7 -delete; sleep 86400; done'
+
+volumes:
+  postgres_data:
+  backups:
+  redis_data:

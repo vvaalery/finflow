@@ -1,0 +1,54 @@
+scalar UUID
+scalar LocalDate
+scalar LocalDateTime
+
+type Role { id: Int!, name: String! }
+type User { id: UUID!, email: String!, fullName: String!, role: Role, isActive: Boolean!, createdAt: LocalDateTime }
+type Company { id: UUID!, name: String!, taxId: String, address: String, phone: String, description: String, websiteUrl: String, logoUrl: String, status: String, ownerId: UUID!, createdAt: LocalDateTime }
+type Account { id: UUID!, companyId: UUID!, accountName: String!, accountType: String!, currency: String!, balance: Float!, isActive: Boolean!, createdAt: LocalDateTime }
+type Transaction { id: UUID!, accountId: UUID!, transactionType: String!, amount: Float!, date: LocalDate!, description: String, category: String, counterparty: String, cfoId: UUID, createdAt: LocalDateTime }
+type PaymentCalendarEntry { id: UUID!, companyId: UUID!, title: String!, description: String, amount: Float!, dueDate: LocalDate!, status: String, category: String, counterparty: String, createdBy: UUID, createdAt: LocalDateTime }
+type PaymentRequest { id: UUID!, title: String, amount: Float, date: LocalDate, status: String, requester: String, counterparty: String, category: String, description: String }
+type Forecast { id: UUID!, companyId: UUID!, start: LocalDate!, end: LocalDate!, inflow: Float, outflow: Float, net: Float, strategy: String, createdAt: LocalDateTime }
+type Aggregate { income: Float!, expense: Float!, net: Float!, transactionCount: Int!, averageAmount: Float! }
+type MutationResult { success: Boolean!, message: String!, id: UUID! }
+
+input CompanyInput { name: String!, taxId: String, address: String, phone: String, description: String }
+input AccountInput { companyId: UUID!, accountName: String!, accountType: String!, currency: String!, balance: Float! }
+input TransactionInput { accountId: UUID!, transactionType: String!, amount: Float!, date: LocalDate!, description: String, category: String, counterparty: String, cfoId: UUID }
+input PaymentInput { companyId: UUID!, title: String!, amount: Float!, dueDate: LocalDate!, status: String, category: String, counterparty: String, description: String }
+input PaymentRequestInput { accountId: UUID!, companyId: UUID!, title: String!, amount: Float!, date: LocalDate!, requester: String, counterparty: String, category: String, description: String }
+input TransactionFilter { type: String, category: String, from: LocalDate, to: LocalDate, minAmount: Float, maxAmount: Float }
+input TransactionSort { field: String, direction: String }
+
+type Query {
+  users: [User!]!
+  user(id: UUID!): User
+  companies: [Company!]!
+  company(id: UUID!): Company
+  accounts(companyId: UUID!): [Account!]!
+  account(id: UUID!): Account
+  transactions(accountId: UUID!, filter: TransactionFilter, sort: TransactionSort, limit: Int, offset: Int): [Transaction!]!
+  transaction(id: UUID!): Transaction
+  paymentCalendar(companyId: UUID!): [PaymentCalendarEntry!]!
+  paymentRequests: [PaymentRequest!]!
+  paymentRequest(id: UUID!): PaymentRequest
+  forecasts(companyId: UUID!): [Forecast!]!
+  transactionAggregate(companyId: UUID!, from: LocalDate, to: LocalDate): Aggregate!
+}
+
+type Mutation {
+  createCompany(input: CompanyInput!, ownerId: UUID!): MutationResult!
+  updateCompany(id: UUID!, input: CompanyInput!): MutationResult!
+  deleteCompany(id: UUID!): MutationResult!
+  createAccount(input: AccountInput!): MutationResult!
+  updateAccount(id: UUID!, input: AccountInput!): MutationResult!
+  deleteAccount(id: UUID!): MutationResult!
+  createTransaction(input: TransactionInput!): MutationResult!
+  updateTransaction(id: UUID!, input: TransactionInput!): MutationResult!
+  deleteTransaction(id: UUID!): MutationResult!
+  createPayment(input: PaymentInput!): MutationResult!
+  createPaymentRequest(input: PaymentRequestInput!): MutationResult!
+  updatePayment(id: UUID!, input: PaymentInput!): MutationResult!
+  deletePayment(id: UUID!): MutationResult!
+}

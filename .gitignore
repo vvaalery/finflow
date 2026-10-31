@@ -1,0 +1,39 @@
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+CREDENTIALS-AND-CHANGES.md
+
+# SSL certificates
+certs/
+
+# Java / Maven
+**/target/
+
+# Frontend dependencies and builds
+**/node_modules/
+**/dist/
+**/build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Backups and temporary files
+*.backup
+*.bak
+*.dump
+
+# Cleanup script
+clean_comments.py
+
+# Local sample data
+payments.csv
+transactions.csv

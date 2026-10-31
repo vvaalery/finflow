@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinFlow | Управление финансами</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e6f0fa 0%, #f0f5fc 100%);
+            min-height: 100vh;
+            padding: 32px 24px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #2c5f8a 0%, #4a7c9c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.3px;
+        }
+        
+        .header p {
+            color: #6b8cae;
+            font-size: 15px;
+            margin-top: 8px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            padding: 28px;
+            margin-bottom: 28px;
+            border: 1px solid rgba(100, 150, 200, 0.15);
+        }
+        
+        .card h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c5f8a;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card h2::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, #5a9bc0 0%, #3a6e8f 100%);
+            border-radius: 2px;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #4a6a85;
+        }
+        
+        input, textarea, select {
+            padding: 12px 14px;
+            border: 1px solid #d4e2ef;
+            border-radius: 14px;
+            font-size: 14px;
+            font-family: inherit;
+            background: #ffffff;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #7bb3d0;
+            box-shadow: 0 0 0 3px rgba(100, 150, 200, 0.15);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #5a9bc0 0%, #3a7b9c 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(58, 110, 140, 0.3);
+        }
+        
+        .btn-secondary {
+            background: rgba(90, 155, 192, 0.1);
+            color: #3a6e8f;
+            border: 1px solid rgba(90, 155, 192, 0.3);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .btn-danger {
+            background: rgba(200, 120, 120, 0.1);
+            color: #b07a7a;
+            border: 1px solid rgba(200, 120, 120, 0.3);
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: 14px 12px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #5a7c98;
+            border-bottom: 1px solid #e2edf7;
+        }
+        
+        td {
+            padding: 14px 12px;
+            font-size: 14px;
+            color: #2c4a6e;
+            border-bottom: 1px solid #eff4fa;
+        }
+        
+        tr:hover td {
+            background-color: #f8fbfe;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(100, 150, 200, 0.2);
+        }
+        
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c5f8a;
+            margin-bottom: 6px;
+        }
+        
+        .stat-label {
+            font-size: 13px;
+            color: #7a9abe;
+        }
+        
+        .message {
+            padding: 14px 18px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .success {
+            background: #e2f3e8;
+            color: #2c6e4e;
+            border-left: 3px solid #5cb085;
+        }
+        
+        .error {
+            background: #fef0f0;
+            color: #b07a7a;
+            border-left: 3px solid #d99;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8aaec9;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            color: #6b8cae;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #5a9bc0 0%, #3a7b9c 100%);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .badge-income, .badge-expense, .badge-pending, .badge-paid, .badge-overdue {
+            padding: 4px 10px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        .badge-income { background: #e2f3e8; color: #2c6e4e; }
+        .badge-expense { background: #fef0f0; color: #b07a7a; }
+        .badge-pending { background: #fff3e0; color: #cc8b2c; }
+        .badge-paid { background: #e2f3e8; color: #2c6e4e; }
+        .badge-overdue { background: #fef0f0; color: #c97a7a; }
+        
+        .amount-positive { color: #4a9b6e; font-weight: 600; }
+        .amount-negative { color: #c97a7a; font-weight: 600; }
+        
+        hr { border: none; border-top: 1px solid #e2edf7; margin: 20px 0; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>FinFlow</h1>
+            <p>Управление корпоративными финансами и прогнозирование денежных потоков</p>
+        </div>
+        
+        <div id="globalMessage"></div>
+        
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value" id="totalBalance">0</div><div class="stat-label">Общий баланс</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalIncome">0</div><div class="stat-label">Доходы (месяц)</div></div>
+            <div class="stat-card"><div class="stat-value" id="totalExpense">0</div><div class="stat-label">Расходы (месяц)</div></div>
+            <div class="stat-card"><div class="stat-value" id="netCashFlow">0</div><div class="stat-label">Чистый поток</div></div>
+            <div class="stat-card"><div class="stat-value" id="overdueTotal">0</div><div class="stat-label">Просроченные платежи</div></div>
+        </div>
+        
+        <div class="flex-between">
+            <div class="tabs">
+                <div class="tab active" data-tab="companies"> Компании</div>
+                <div class="tab" data-tab="accounts"> Счета</div>
+                <div class="tab" data-tab="transactions"> Транзакции</div>
+                <div class="tab" data-tab="payments"> Платежный календарь</div>
+                <div class="tab" data-tab="forecast"> Прогноз</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; background: white; padding: 8px 16px; border-radius: 40px; border: 1px solid rgba(100, 150, 200, 0.2);">
+                <span style="color: #4a6a85;"> Компания:</span>
+                <select id="globalCompanySelect" style="border: none; background: transparent; font-weight: 500; color: #2c5f8a;">
+                    <option value="">Выберите компанию</option>
+                </select>
+            </div>
+        </div>
+        
+        
+        <div class="tab-content active" id="companiesTab">
+            <div class="card">
+                <h2> Новая компания</h2>
+                <form id="companyForm">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Название компании</label><input type="text" id="compName" placeholder="ООО ФинансТех" required></div>
+                        <div class="form-group"><label>ИНН / УНП</label><input type="text" id="compTaxId" placeholder="123456789"></div>
+                        <div class="form-group"><label>Адрес</label><input type="text" id="compAddress" placeholder="г. Минск, ул. Примерная, д. 1"></div>
+                        <div class="form-group"><label>Телефон</label><input type="text" id="compPhone" placeholder="+375291234567"></div>
+                    </div>
+                    <button type="submit" class="btn-primary"> Создать компанию</button>
+                </form>
+            </div>
+            <div class="card"><h2> Мои компании</h2><div id="companiesList" class="loading">Загрузка...</div></div>
+        </div>
+        
+        
+        <div class="tab-content" id="accountsTab">
+            <div class="card">
+                <h2> Новый счет</h2>
+                <form id="accountForm">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Компания</label><select id="accCompanyId" required></select></div>
+                        <div class="form-group"><label>Название счета</label><input type="text" id="accName" placeholder="Основной расчетный счет" required></div>
+                        <div class="form-group"><label>Тип счета</label><select id="accType"><option value="BANK">Банковский</option><option value="CASH">Наличные</option><option value="CARD">Карта</option></select></div>
+                        <div class="form-group"><label>Валюта</label><select id="accCurrency"><option value="BYN">BYN</option><option value="USD">USD</option><option value="EUR">EUR</option></select></div>
+                    </div>
+                    <button type="submit" class="btn-primary"> Создать счет</button>
+                </form>
+            </div>
+            <div class="card"><h2> Мои счета</h2><div id="accountsList" class="loading">Загрузка...</div></div>
+        </div>
+        
+        
+        <div class="tab-content" id="transactionsTab">
+            <div class="card">
+                <h2> Новая транзакция</h2>
+                <form id="transactionForm">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Счет</label><select id="transAccountId" required></select></div>
+                        <div class="form-group"><label>Тип</label><select id="transType"><option value="INCOME"> Доход</option><option value="EXPENSE"> Расход</option></select></div>
+                        <div class="form-group"><label>Сумма</label><input type="number" id="transAmount" step="0.01" placeholder="1000.00" required></div>
+                        <div class="form-group"><label>Категория</label><input type="text" id="transCategory" placeholder="Зарплата / Аренда / ..."></div>
+                        <div class="form-group"><label>Описание</label><input type="text" id="transDescription" placeholder="Описание операции"></div>
+                        <div class="form-group"><label>Дата</label><input type="date" id="transDate"></div>
+                    </div>
+                    <button type="submit" class="btn-primary"> Добавить транзакцию</button>
+                </form>
+            </div>
+            <div class="card"><h2> История операций</h2><div id="transactionsList" class="loading">Загрузка...</div></div>
+        </div>
+        
+        
+        <div class="tab-content" id="paymentsTab">
+            <div class="card">
+                <h2> Новый платеж</h2>
+                <form id="paymentForm">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Компания</label><select id="paymentCompanyId" required></select></div>
+                        <div class="form-group"><label>Название платежа</label><input type="text" id="paymentTitle" placeholder="Аренда офиса" required></div>
+                        <div class="form-group"><label>Сумма</label><input type="number" id="paymentAmount" step="0.01" placeholder="10000.00" required></div>
+                        <div class="form-group"><label>Дата платежа</label><input type="date" id="paymentDueDate" required></div>
+                        <div class="form-group"><label>Категория</label><input type="text" id="paymentCategory" placeholder="Аренда, Зарплата..."></div>
+                        <div class="form-group"><label>Контрагент</label><input type="text" id="paymentCounterparty" placeholder="Название организации"></div>
+                        <div class="form-group"><label>Описание</label><input type="text" id="paymentDescription" placeholder="Дополнительная информация"></div>
+                    </div>
+                    <button type="submit" class="btn-primary"> Создать платеж</button>
+                </form>
+            </div>
+            <div class="card">
+                <div class="flex-between" style="margin-bottom: 16px;">
+                    <h2> Платежи</h2>
+                    <div><button class="btn-secondary" onclick="loadAllPayments()">Все платежи</button> <button class="btn-secondary" onclick="loadUpcomingPayments()">Предстоящие (30 дней)</button></div>
+                </div>
+                <div id="paymentsList" class="loading">Загрузка...</div>
+            </div>
+        </div>
+        
+        
+        <div class="tab-content" id="forecastTab">
+            <div class="card">
+                <h2> Многовариантный прогноз денежных потоков</h2>
+                <div class="form-grid">
+                    <div class="form-group"><label>Компания</label><select id="forecastCompanyId"></select></div>
+                    <div class="form-group"><label>Период (месяцев)</label><select id="forecastMonths"><option value="3">3 месяца</option><option value="6" selected>6 месяцев</option><option value="12">12 месяцев</option></select></div>
+                    <div class="form-group"><label>Метод прогноза</label><select id="forecastStrategy"><option value="gradientBoosting" selected>Ансамблевый градиентный бустинг</option><option value="linearRegression">Линейная регрессия</option><option value="movingAverage">Скользящее среднее</option></select></div>
+                </div>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <button id="forecastBaseBtn" class="btn-primary"> Базовый сценарий</button>
+                    <button id="forecastOptimisticBtn" class="btn-secondary" style="background: #e2f3e8; color: #2c6e4e;"> Оптимистичный (+20%)</button>
+                    <button id="forecastPessimisticBtn" class="btn-secondary" style="background: #fef0f0; color: #b07a7a;"> Пессимистичный (-15%)</button>
+                </div>
+                <hr>
+                <div id="forecastResult"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const OWNER_ID = (() => { try { return JSON.parse(localStorage.getItem('auth-storage') || '{}')?.state?.user?.id || ''; } catch { return ''; } })();
+        const API_URL = '/api';
+        
+        let companies = [];
+        let accounts = [];
+        let transactions = [];
+        let payments = [];
+        let currentPaymentView = 'upcoming';
+        
+        function showMessage(text, type, container = 'globalMessage') {
+            const msgDiv = document.getElementById(container);
+            msgDiv.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => { if (msgDiv.innerHTML) msgDiv.innerHTML = ''; }, 3000);
+        }
+        
+        function formatNumber(num) {
+            return Number(num).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        async function loadCompanies() {
+            try {
+                const response = await fetch(`${API_URL}/companies?ownerId=${OWNER_ID}`);
+                companies = await response.json();
+                const listDiv = document.getElementById('companiesList');
+                if (companies.length === 0) {
+                    listDiv.innerHTML = '<div style="text-align: center; padding: 40px;"> Нет компаний</div>';
+                } else {
+                    let html = ` <table> <thead> <tr><th>Название</th><th>ИНН</th><th>Адрес</th><th>Телефон</th><th></th></tr> </thead> <tbody>`;
+                    companies.forEach(c => {
+                        html += `<tr><td><strong>${escapeHtml(c.name)}</strong></td><td>${escapeHtml(c.taxId || '-')}</td><td>${escapeHtml(c.address || '-')}</td><td>${escapeHtml(c.phone || '-')}</td><td><button class="btn-danger" onclick="deleteCompany('${c.id}')">Удалить</button></td></tr>`;
+                    });
+                    html += `</tbody></table>`;
+                    listDiv.innerHTML = html;
+                }
+                updateCompanySelects();
+                updateGlobalCompanySelect();
+            } catch (error) {
+                document.getElementById('companiesList').innerHTML = '<div class="message error"> Ошибка загрузки</div>';
+            }
+        }
+        
+        function updateGlobalCompanySelect() {
+            const select = document.getElementById('globalCompanySelect');
+            if (select) {
+                select.innerHTML = '<option value="">Выберите компанию</option>' + companies.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+                const savedCompanyId = localStorage.getItem('selectedCompanyId');
+                if (savedCompanyId && companies.find(c => c.id === savedCompanyId)) {
+                    select.value = savedCompanyId;
+                    onCompanySelected(savedCompanyId);
+                }
+            }
+        }
+        
+        function onCompanySelected(companyId) {
+            if (!companyId) return;
+            localStorage.setItem('selectedCompanyId', companyId);
+            const selects = ['accCompanyId', 'paymentCompanyId', 'forecastCompanyId'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) select.value = companyId;
+            });
+            loadAccounts();
+            loadTransactions();
+            loadUpcomingPayments();
+            loadOverdueTotal();
+        }
+        
+        async function loadAccounts() {
+            const selectedCompanyId = document.getElementById('globalCompanySelect')?.value;
+            if (!selectedCompanyId) {
+                document.getElementById('accountsList').innerHTML = '<div style="text-align: center; padding: 40px;"> Сначала выберите компанию в шапке</div>';
+                return;
+            }
+            try {
+                const accountsRes = await fetch(`${API_URL}/accounts?companyId=${selectedCompanyId}`);
+                accounts = await accountsRes.json();
+                const listDiv = document.getElementById('accountsList');
+                if (accounts.length === 0) {
+                    listDiv.innerHTML = '<div style="text-align: center; padding: 40px;"> Нет счетов. Создайте первый!</div>';
+                } else {
+                    let html = `<table><thead><tr><th>Название</th><th>Тип</th><th>Валюта</th><th>Баланс</th><th></th></tr></thead><tbody>`;
+                    accounts.forEach(a => {
+                        html += `<tr><td><strong>${escapeHtml(a.accountName)}</strong></td><td>${escapeHtml(a.accountType)}</td><td>${escapeHtml(a.currency)}</td><td class="amount-positive">${formatNumber(a.balance)}</td><td><button class="btn-danger" onclick="deleteAccount('${a.id}')">Удалить</button></td></tr>`;
+                    });
+                    html += `</tbody></table>`;
+                    listDiv.innerHTML = html;
+                }
+                updateAccountSelects();
+                updateStats();
+            } catch (error) {
+                document.getElementById('accountsList').innerHTML = '<div class="message error"> Ошибка загрузки счетов</div>';
+            }
+        }
+        
+        async function loadTransactions() {
+            const selectedCompanyId = document.getElementById('globalCompanySelect')?.value;
+            if (!selectedCompanyId) {
+                document.getElementById('transactionsList').innerHTML = '<div style="text-align: center; padding: 40px;"> Сначала выберите компанию в шапке</div>';
+                return;
+            }
+            try {
+                const accountsRes = await fetch(`${API_URL}/accounts?companyId=${selectedCompanyId}`);
+                const companyAccounts = await accountsRes.json();
+                let allTransactions = [];
+                for (const account of companyAccounts) {
+                    const transRes = await fetch(`${API_URL}/transactions?accountId=${account.id}`);
+                    const accountTransactions = await transRes.json();
+                    allTransactions = [...allTransactions, ...accountTransactions];
+                }
+                allTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+                transactions = allTransactions;
+                const listDiv = document.getElementById('transactionsList');
+                if (transactions.length === 0) {
+                    listDiv.innerHTML = '<div style="text-align: center; padding: 40px;"> Нет транзакций</div>';
+                } else {
+                    let html = `<table><thead><tr><th>Дата</th><th>Счет</th><th>Тип</th><th>Категория</th><th>Сумма</th><th>Описание</th></tr></thead><tbody>`;
+                    transactions.forEach(t => {
+                        const account = companyAccounts.find(a => a.id === t.accountId);
+                        const isIncome = t.transactionType === 'INCOME';
+                        html += `<tr><td>${new Date(t.date).toLocaleDateString('ru-RU')}</td><td>${escapeHtml(account?.accountName || '-')}</td><td><span class="${isIncome ? 'badge-income' : 'badge-expense'}">${isIncome ? 'Доход' : 'Расход'}</span></td><td>${escapeHtml(t.category || '-')}</td><td class="${isIncome ? 'amount-positive' : 'amount-negative'}">${isIncome ? '+' : '-'} ${formatNumber(t.amount)}</td><td>${escapeHtml(t.description || '-')}</td></tr>`;
+                    });
+                    html += `</tbody></table>`;
+                    listDiv.innerHTML = html;
+                }
+                updateStats();
+            } catch (error) {
+                document.getElementById('transactionsList').innerHTML = '<div class="message error"> Ошибка загрузки транзакций</div>';
+            }
+        }
+        
+        async function loadAllPayments() {
+            currentPaymentView = 'all';
+            const companyId = document.getElementById('globalCompanySelect')?.value;
+            if (!companyId) { showMessage('Выберите компанию', 'error'); return; }
+            try {
+                const response = await fetch(`${API_URL}/payments?companyId=${companyId}`);
+                payments = await response.json();
+                renderPaymentsList();
+            } catch (error) {
+                document.getElementById('paymentsList').innerHTML = '<div class="message error"> Ошибка загрузки</div>';
+            }
+        }
+        
+        async function loadUpcomingPayments() {
+            currentPaymentView = 'upcoming';
+            const companyId = document.getElementById('globalCompanySelect')?.value;
+            if (!companyId) {
+                document.getElementById('paymentsList').innerHTML = '<div style="text-align: center; padding: 40px;"> Сначала выберите компанию в шапке</div>';
+                return;
+            }
+            try {
+                const response = await fetch(`${API_URL}/payments/upcoming?companyId=${companyId}`);
+                payments = await response.json();
+                renderPaymentsList();
+                loadOverdueTotal();
+            } catch (error) {
+                document.getElementById('paymentsList').innerHTML = '<div class="message error"> Ошибка загрузки</div>';
+            }
+        }
+        
+        function renderPaymentsList() {
+            const listDiv = document.getElementById('paymentsList');
+            if (payments.length === 0) {
+                listDiv.innerHTML = '<div style="text-align: center; padding: 40px;"> Нет платежей</div>';
+                return;
+            }
+            let html = `<table><thead><tr><th>Дата</th><th>Название</th><th>Сумма</th><th>Категория</th><th>Контрагент</th><th>Статус</th><th></th></tr></thead><tbody>`;
+            payments.forEach(p => {
+                const isOverdue = new Date(p.dueDate) < new Date() && p.status !== 'PAID';
+                let statusClass = 'badge-pending', statusText = 'Ожидает';
+                if (p.status === 'PAID') { statusClass = 'badge-paid'; statusText = 'Оплачено'; }
+                else if (isOverdue) { statusClass = 'badge-overdue'; statusText = 'Просрочено'; }
+                html += `<tr><td>${new Date(p.dueDate).toLocaleDateString('ru-RU')}</td><td><strong>${escapeHtml(p.title)}</strong></td><td class="amount-negative">${formatNumber(p.amount)}</td><td>${escapeHtml(p.category || '-')}</td><td>${escapeHtml(p.counterparty || '-')}</td><td><span class="${statusClass}">${statusText}</span></td><td>${p.status !== 'PAID' ? `<button class="btn-secondary" onclick="markAsPaid('${p.id}')"> Оплатить</button>` : ''}<button class="btn-danger" onclick="deletePayment('${p.id}')"></button></td></tr>`;
+            });
+            html += `</tbody></table>`;
+            listDiv.innerHTML = html;
+        }
+        
+        async function markAsPaid(id) {
+            try {
+                await fetch(`${API_URL}/payments/${id}/status?status=PAID`, { method: 'PATCH' });
+                showMessage(' Платеж отмечен как оплаченный', 'success');
+                if (currentPaymentView === 'upcoming') loadUpcomingPayments();
+                else loadAllPayments();
+                loadOverdueTotal();
+            } catch (error) { showMessage(' Ошибка', 'error'); }
+        }
+        
+        async function deletePayment(id) {
+            if (!confirm('Удалить платеж?')) return;
+            try {
+                await fetch(`${API_URL}/payments/${id}`, { method: 'DELETE' });
+                showMessage(' Платеж удален', 'success');
+                if (currentPaymentView === 'upcoming') loadUpcomingPayments();
+                else loadAllPayments();
+                loadOverdueTotal();
+            } catch (error) { showMessage(' Ошибка', 'error'); }
+        }
+        
+        async function loadOverdueTotal() {
+            const companyId = document.getElementById('globalCompanySelect')?.value;
+            if (!companyId) return;
+            try {
+                const response = await fetch(`${API_URL}/payments/overdue-total?companyId=${companyId}`);
+                const total = await response.json();
+                document.getElementById('overdueTotal').innerHTML = formatNumber(total);
+            } catch (error) { console.error('Error loading overdue total'); }
+        }
+        
+        async function updateStats() {
+            const totalBalance = accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+            const monthlyTransactions = transactions.filter(t => new Date(t.date).getMonth() === currentMonth && new Date(t.date).getFullYear() === currentYear);
+            const totalIncome = monthlyTransactions.filter(t => t.transactionType === 'INCOME').reduce((sum, t) => sum + t.amount, 0);
+            const totalExpense = monthlyTransactions.filter(t => t.transactionType === 'EXPENSE').reduce((sum, t) => sum + t.amount, 0);
+            const netFlow = totalIncome - totalExpense;
+            document.getElementById('totalBalance').innerHTML = formatNumber(totalBalance);
+            document.getElementById('totalIncome').innerHTML = formatNumber(totalIncome);
+            document.getElementById('totalExpense').innerHTML = formatNumber(totalExpense);
+            const netElement = document.getElementById('netCashFlow');
+            netElement.innerHTML = formatNumber(netFlow);
+            netElement.style.color = netFlow >= 0 ? '#4a9b6e' : '#c97a7a';
+        }
+        
+        async function createCompany(event) {
+            event.preventDefault();
+            const name = document.getElementById('compName').value;
+            if (!name) { showMessage('Введите название компании', 'error'); return; }
+            try {
+                const response = await fetch(`${API_URL}/companies?ownerId=${OWNER_ID}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, taxId: document.getElementById('compTaxId').value, address: document.getElementById('compAddress').value, phone: document.getElementById('compPhone').value })
+                });
+                if (response.ok) { showMessage(' Компания создана!', 'success'); document.getElementById('companyForm').reset(); loadCompanies(); }
+                else { showMessage(' Ошибка создания', 'error'); }
+            } catch (error) { showMessage(' Ошибка: ' + error.message, 'error'); }
+        }
+        
+        async function createAccount(event) {
+            event.preventDefault();
+            const companyId = document.getElementById('accCompanyId').value;
+            const accountName = document.getElementById('accName').value;
+            if (!companyId || !accountName) { showMessage('Заполните обязательные поля', 'error'); return; }
+            try {
+                const response = await fetch(`${API_URL}/accounts?companyId=${companyId}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accountName, accountType: document.getElementById('accType').value, currency: document.getElementById('accCurrency').value })
+                });
+                if (response.ok) { showMessage(' Счет создан!', 'success'); document.getElementById('accountForm').reset(); loadAccounts(); }
+                else { showMessage(' Ошибка создания', 'error'); }
+            } catch (error) { showMessage(' Ошибка: ' + error.message, 'error'); }
+        }
+        
+        async function createTransaction(event) {
+            event.preventDefault();
+            const accountId = document.getElementById('transAccountId').value;
+            const amount = parseFloat(document.getElementById('transAmount').value);
+            if (!accountId || !amount) { showMessage('Заполните обязательные поля', 'error'); return; }
+            try {
+                const response = await fetch(`${API_URL}/transactions`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ accountId, type: document.getElementById('transType').value, amount, category: document.getElementById('transCategory').value, description: document.getElementById('transDescription').value, date: document.getElementById('transDate').value || new Date().toISOString().split('T')[0] })
+                });
+                if (response.ok) { showMessage(' Транзакция добавлена!', 'success'); document.getElementById('transactionForm').reset(); loadTransactions(); loadAccounts(); }
+                else { showMessage(' Ошибка создания', 'error'); }
+            } catch (error) { showMessage(' Ошибка: ' + error.message, 'error'); }
+        }
+        
+        async function createPayment(event) {
+            event.preventDefault();
+            const companyId = document.getElementById('globalCompanySelect')?.value;
+            const title = document.getElementById('paymentTitle').value;
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            if (!companyId || !title || !amount) { showMessage('Заполните обязательные поля', 'error'); return; }
+            try {
+                const response = await fetch(`${API_URL}/payments?userId=${OWNER_ID}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ companyId, title, amount, dueDate: document.getElementById('paymentDueDate').value, category: document.getElementById('paymentCategory').value, counterparty: document.getElementById('paymentCounterparty').value, description: document.getElementById('paymentDescription').value })
+                });
+                if (response.ok) { showMessage(' Платеж создан!', 'success'); document.getElementById('paymentForm').reset(); loadUpcomingPayments(); loadOverdueTotal(); }
+                else { showMessage(' Ошибка создания', 'error'); }
+            } catch (error) { showMessage(' Ошибка: ' + error.message, 'error'); }
+        }
+        
+        async function deleteCompany(id) {
+            if (!confirm('Удалить компанию?')) return;
+            try { await fetch(`${API_URL}/companies/${id}`, { method: 'DELETE' }); showMessage(' Компания удалена', 'success'); loadCompanies(); loadAccounts(); }
+            catch (error) { showMessage(' Ошибка', 'error'); }
+        }
+        
+        async function deleteAccount(id) {
+            if (!confirm('Удалить счет?')) return;
+            try { await fetch(`${API_URL}/accounts/${id}`, { method: 'DELETE' }); showMessage(' Счет удален', 'success'); loadAccounts(); loadTransactions(); }
+            catch (error) { showMessage(' Ошибка', 'error'); }
+        }
+        
+        function updateCompanySelects() {
+            const selects = ['accCompanyId', 'paymentCompanyId', 'forecastCompanyId'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                if (select) select.innerHTML = '<option value="">Выберите компанию</option>' + companies.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+            });
+        }
+        
+        function updateAccountSelects() {
+            const select = document.getElementById('transAccountId');
+            if (select) select.innerHTML = '<option value="">Выберите счет</option>' + accounts.map(a => `<option value="${a.id}">${escapeHtml(a.accountName)} (${formatNumber(a.balance)})</option>`).join('');
+        }
+        
+        async function generateForecast(multiplier) {
+            const companyId = document.getElementById('globalCompanySelect')?.value;
+            const months = document.getElementById('forecastMonths').value;
+            const strategy = document.getElementById('forecastStrategy').value;
+            if (!companyId) { showMessage('Сначала выберите компанию в шапке', 'error', 'globalMessage'); return; }
+            document.getElementById('forecastResult').innerHTML = '<div class="loading"> Расчет прогноза...</div>';
+            try {
+                let url = `${API_URL}/forecast/generate?companyId=${companyId}&months=${months}&strategy=${strategy}`;
+                if (multiplier) url += `&multiplier=${multiplier}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                let scenarioText = 'Базовый сценарий';
+                if (multiplier === 1.2) scenarioText = ' Оптимистичный сценарий (+20%)';
+                if (multiplier === 0.85) scenarioText = ' Пессимистичный сценарий (-15%)';
+                document.getElementById('forecastResult').innerHTML = `
+                    <div style="background: #f8fbfe; border-radius: 20px; padding: 24px;">
+                        <h3 style="color: #2c5f8a; margin-bottom: 16px;">${scenarioText}</h3>
+                        <div style="font-size: 36px; font-weight: 700; color: #2c5f8a; margin-bottom: 8px;">${formatNumber(data.netCashFlow)}</div>
+                        <div style="color: #7a9abe; margin-bottom: 24px;">Ожидаемый чистый денежный поток за ${months} месяцев</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div><div style="color: #7a9abe; font-size: 12px;">Прогнозируемые доходы</div><div class="amount-positive" style="font-size: 20px;">${formatNumber(data.totalProjectedInflow)}</div></div>
+                            <div><div style="color: #7a9abe; font-size: 12px;">Прогнозируемые расходы</div><div class="amount-negative" style="font-size: 20px;">${formatNumber(data.totalProjectedOutflow)}</div></div>
+                        </div>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('forecastResult').innerHTML = '<div class="message error"> Ошибка формирования прогноза</div>';
+            }
+        }
+        
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`${tabName}Tab`).classList.add('active');
+            });
+        });
+        
+        document.getElementById('companyForm').addEventListener('submit', createCompany);
+        document.getElementById('accountForm').addEventListener('submit', createAccount);
+        document.getElementById('transactionForm').addEventListener('submit', createTransaction);
+        document.getElementById('paymentForm').addEventListener('submit', createPayment);
+        document.getElementById('forecastBaseBtn').addEventListener('click', () => generateForecast(1));
+        document.getElementById('forecastOptimisticBtn').addEventListener('click', () => generateForecast(1.2));
+        document.getElementById('forecastPessimisticBtn').addEventListener('click', () => generateForecast(0.85));
+        document.getElementById('globalCompanySelect').addEventListener('change', (e) => onCompanySelected(e.target.value));
+        
+        loadCompanies();
+        loadAccounts();
+        loadTransactions();
+    </script>
+</body>
+</html>

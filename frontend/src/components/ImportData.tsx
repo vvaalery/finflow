@@ -1,0 +1,216 @@
+import React, { useState, useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
+import apiClient from '../api/client';
+
+interface Account {
+  id: string;
+  accountName: string;
+}
+
+interface ImportResult {
+  totalRows: number;
+  successRows: number;
+  errorRows: number;
+  errors: string[];
+}
+
+const ImportData: React.FC = () => {
+  const { user } = useAuthStore();
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState('');
+  const [type, setType] = useState<'transactions' | 'payments'>('transactions');
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [companyName, setCompanyName] = useState<string>('');
+  const [companyId, setCompanyId] = useState<string>(''); // <-- ДОБАВИТЬ
+
+  useEffect(() => {
+    loadCompanyAndAccounts();
+  }, []);
+
+  const loadCompanyAndAccounts = async () => {
+    try {
+      const companiesRes = await apiClient.get('/companies', {
+        params: { ownerId: user?.id }
+      });
+      
+      if (companiesRes.data.length > 0) {
+        const firstCompany = companiesRes.data[0];
+        setCompanyName(firstCompany.name);
+        setCompanyId(firstCompany.id); // <-- ДОБАВИТЬ
+        
+        const accountsRes = await apiClient.get(`/accounts?companyId=${firstCompany.id}`);
+        setAccounts(accountsRes.data);
+        if (accountsRes.data.length > 0) {
+          setSelectedAccount(accountsRes.data[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading company and accounts:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) return;
+    
+    setLoading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    if (type === 'transactions') {
+      if (!selectedAccount) {
+        alert('Выберите счёт');
+        setLoading(false);
+        return;
+      }
+      formData.append('accountId', selectedAccount);
+    } else if (type === 'payments') { // <-- ДОБАВИТЬ
+      if (!companyId) {
+        alert('Компания не найдена');
+        setLoading(false);
+        return;
+      }
+      formData.append('companyId', companyId);
+    }
+    
+    try {
+      const response = await apiClient.post(`/import/${type}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setResult(response.data);
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Ошибка импорта');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 14px',
+    border: '1px solid #d4e2ef',
+    borderRadius: '14px',
+    fontSize: '14px',
+    boxSizing: 'border-box' as const,
+    height: '48px'
+  };
+
+  return (
+    <div className="card">
+      <h2> Импорт данных</h2>
+      
+      <form onSubmit={handleSubmit}>
+        <div className="form-grid">
+          <div className="form-group">
+            <label>Тип данных</label>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as 'transactions' | 'payments')}
+              style={inputStyle}
+            >
+              <option value="transactions"> Транзакции (доходы/расходы)</option>
+              <option value="payments"> Платежи</option>
+            </select>
+          </div>
+          
+          {type === 'transactions' && (
+            <>
+              <div className="form-group">
+                <label>Компания</label>
+                <input
+                  type="text"
+                  value={companyName}
+                  disabled
+                  style={{ ...inputStyle, background: '#f5f7fa', color: '#1c2e43', fontWeight: '500' }}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label>Счёт</label>
+                <select
+                  value={selectedAccount}
+                  onChange={(e) => setSelectedAccount(e.target.value)}
+                  required
+                  style={inputStyle}
+                >
+                  <option value="">Выберите счёт</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.accountName}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+          
+          {type === 'payments' && (
+            <div className="form-group">
+              <label>Компания</label>
+              <input
+                type="text"
+                value={companyName}
+                disabled
+                style={{ ...inputStyle, background: '#f5f7fa', color: '#1c2e43', fontWeight: '500' }}
+              />
+            </div>
+          )}
+          
+          <div className="form-group">
+            <label>Файл (Excel/CSV)</label>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              required
+              style={inputStyle}
+            />
+          </div>
+        </div>
+        
+        <button
+          type="submit"
+          disabled={loading || !file}
+          className="btn-primary"
+          style={{ height: '48px' }}
+        >
+          {loading ? '⏳ Импорт...' : ' Импортировать'}
+        </button>
+      </form>
+      
+      {result && (
+        <div className="mt-6" style={{ background: '#f8fbfe', borderRadius: '20px', padding: '20px', border: '1px solid rgba(100, 150, 200, 0.2)' }}>
+          <h3 style={{ color: '#1c2e43', marginBottom: '16px', fontSize: '16px' }}>Результат импорта:</h3>
+          <div style={{ display: 'flex', gap: '32px', marginBottom: '16px' }}>
+            <div>
+              <span style={{ color: '#8792a2', fontSize: '12px' }}>Всего строк</span>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#1c2e43' }}>{result.totalRows}</div>
+            </div>
+            <div>
+              <span style={{ color: '#8792a2', fontSize: '12px' }}>Успешно</span>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#1d796c' }}>{result.successRows}</div>
+            </div>
+            <div>
+              <span style={{ color: '#8792a2', fontSize: '12px' }}>Ошибок</span>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#b66c62' }}>{result.errorRows}</div>
+            </div>
+          </div>
+          {result.errors.length > 0 && (
+            <div>
+              <p style={{ color: '#b66c62', fontSize: '13px', marginBottom: '8px' }}> Ошибки:</p>
+              <ul style={{ color: '#9c6259', fontSize: '12px', paddingLeft: '20px' }}>
+                {result.errors.slice(0, 5).map((err, i) => (
+                  <li key={i}>{err}</li>
+                ))}
+                {result.errors.length > 5 && <li>... и ещё {result.errors.length - 5} ошибок</li>}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ImportData;

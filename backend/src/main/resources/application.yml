@@ -1,0 +1,76 @@
+
+spring:
+  graphql:
+    graphiql:
+      enabled: true
+    path: /graphql
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/finance_db?useUnicode=true&characterEncoding=utf8}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:1111}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      validation-timeout: 5000
+      keepalive-time: 30000
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      connect-timeout: 2s
+      timeout: 2s
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  jackson:
+    encoding: UTF-8
+
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+
+server:
+  port: ${SERVER_PORT:8443}
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:false}
+    key-store: ${SERVER_SSL_KEY_STORE:file:./certs/keystore.p12}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:changeit}
+    key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
+    key-alias: ${SERVER_SSL_KEY_ALIAS:finflow}
+  compression:
+    enabled: true
+    min-response-size: 1024
+  error:
+    include-message: always
+    include-binding-errors: always
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true

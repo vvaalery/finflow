@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package company;
+
+// Contract for the future PaymentService -> CompanyService gRPC interaction.
+// Lab 3 uses a mock client; no network call is generated at this stage.
+service CompanyService {
+  rpc GetAccount(GetAccountRequest) returns (GetAccountResponse);
+  rpc GetCompany(GetCompanyRequest) returns (GetCompanyResponse);
+}
+
+message GetAccountRequest { string account_id = 1; }
+message GetAccountResponse {
+  string id = 1;
+  string company_id = 2;
+  string account_name = 3;
+  string account_type = 4;
+  string currency = 5;
+  double balance = 6;
+  bool is_active = 7;
+}
+message GetCompanyRequest { string company_id = 1; }
+message GetCompanyResponse {
+  string id = 1;
+  string name = 2;
+  string tax_id = 3;
+  string status = 4;
+}
