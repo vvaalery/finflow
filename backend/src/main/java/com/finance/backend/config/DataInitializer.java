@@ -27,7 +27,7 @@ public class DataInitializer {
             Role manager = roles.findByName("FINANCIAL_MANAGER").orElseGet(() -> {
                 Role role = new Role(); role.setName("FINANCIAL_MANAGER"); return roles.save(role);
             });
-            Role director = roles.findByName("DIRECTOR").orElseGet(() -> {
+            roles.findByName("DIRECTOR").orElseGet(() -> {
                 Role role = new Role(); role.setName("DIRECTOR"); return roles.save(role);
             });
             Role admin = roles.findByName("ADMIN").orElseGet(() -> {
@@ -40,26 +40,6 @@ public class DataInitializer {
                 user.setFullName("System Administrator");
                 user.setPasswordHash(encoder.encode("Admin123!"));
                 user.setRole(admin);
-                user.setIsActive(true);
-                return users.save(user);
-            });
-
-            // Initial accounts are created only when absent; existing passwords are never reset on restart.
-            users.findByEmail("manager@finflow.local").orElseGet(() -> {
-                User user = new User();
-                user.setEmail("manager@finflow.local");
-                user.setFullName("Финансовый менеджер");
-                user.setPasswordHash(encoder.encode("Manager123!"));
-                user.setRole(manager);
-                user.setIsActive(true);
-                return users.save(user);
-            });
-            users.findByEmail("director@finflow.local").orElseGet(() -> {
-                User user = new User();
-                user.setEmail("director@finflow.local");
-                user.setFullName("Руководитель");
-                user.setPasswordHash(encoder.encode("Director123!"));
-                user.setRole(director);
                 user.setIsActive(true);
                 return users.save(user);
             });
