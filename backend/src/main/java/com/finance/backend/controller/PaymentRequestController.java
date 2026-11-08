@@ -31,7 +31,6 @@ public class PaymentRequestController {
     public List<PaymentRequest> getAll() {
         List<PaymentRequest> requests = repository.findAll();
         
-        // Создаем ключи, чтобы не показывать в списке "виртуальные" записи, если они уже есть в БД
         Set<String> existingKeys = requests.stream()
                 .map(r -> r.getTitle() + "_" + r.getAmount() + "_" + r.getDate())
                 .collect(Collectors.toSet());
@@ -42,7 +41,7 @@ public class PaymentRequestController {
             .filter(item -> !existingKeys.contains(item.getTitle() + "_" + item.getAmount() + "_" + item.getDueDate()))
             .map(item -> {
                 PaymentRequest req = new PaymentRequest();
-                req.setId(item.getId()); // Временный ID для фронтенда
+                req.setId(item.getId()); 
                 req.setTitle(item.getTitle());
                 req.setAmount(item.getAmount());
                 req.setDate(item.getDueDate()); 
@@ -74,21 +73,16 @@ public class PaymentRequestController {
 @Transactional
 public PaymentRequest updateStatus(@PathVariable UUID id, @RequestParam String status) {
     try {
-        // 1. Сначала проверяем, есть ли запись в самом календаре по этому ID
         PaymentCalendar calItem = calendarRepository.findById(id).orElse(null);
         
         PaymentRequest request;
 
         if (calItem != null) {
-            // Если нашли в календаре — значит это первый переход из "плана" в "реальность"
             System.out.println(">>> Синхронизация: Найдена запись в календаре. Обновляем статус.");
             
-            // Обновляем статус в календаре
             calItem.setStatus(status);
             calendarRepository.save(calItem);
 
-            // Создаем или ищем соответствующий запрос
-            // Ищем по полям, чтобы не создать дубль, если запрос уже был создан ранее
             request = repository.findAll().stream()
                 .filter(r -> r.getTitle().equals(calItem.getTitle()) && 
                              r.getAmount().compareTo(calItem.getAmount()) == 0 &&
@@ -96,7 +90,6 @@ public PaymentRequest updateStatus(@PathVariable UUID id, @RequestParam String s
                 .findFirst()
                 .orElse(new PaymentRequest());
 
-            // Заполняем/обновляем поля запроса
             if (request.getId() == null) {
                 request.setTitle(calItem.getTitle());
                 request.setAmount(calItem.getAmount());
@@ -107,11 +100,9 @@ public PaymentRequest updateStatus(@PathVariable UUID id, @RequestParam String s
                 request.setDescription("Одобрено из календаря");
             }
         } else {
-            // Если в календаре по этому ID ничего нет, значит это уже существующий PaymentRequest
             request = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Заявка с ID " + id + " не найдена"));
             
-            // Пытаемся найти связанный календарь по полям (на всякий случай для синхронизации назад)
             final String title = request.getTitle();
             final BigDecimal amount = request.getAmount();
             final LocalDate date = request.getDate();

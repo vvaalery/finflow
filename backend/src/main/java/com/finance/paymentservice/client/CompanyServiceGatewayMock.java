@@ -5,7 +5,6 @@ import com.finance.backend.repository.AccountRepository;
 import org.springframework.stereotype.Service;
 import java.util.UUID;
 
-/** Lab 3 stub. Later this implementation is replaced by a gRPC client generated from company.proto. */
 @Service
 public class CompanyServiceGatewayMock implements CompanyServiceGateway {
     private final AccountRepository accounts;

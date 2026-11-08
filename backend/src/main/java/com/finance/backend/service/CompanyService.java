@@ -27,7 +27,6 @@ public class CompanyService {
             .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
         
         Company company = new Company();
-        
         mapRequestToEntity(company, request);
         company.setOwner(owner);
         
@@ -40,14 +39,12 @@ public class CompanyService {
         Company company = companyRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Компания не найдена"));
         
-        
         mapRequestToEntity(company, request);
         
         Company updated = companyRepository.save(company);
         return mapToResponse(updated);
     }
 
-    
     private void mapRequestToEntity(Company company, CompanyRequest request) {
         company.setName(request.getName());
         company.setTaxId(request.getTaxId());
@@ -58,7 +55,6 @@ public class CompanyService {
         company.setStatus(request.getStatus());
     }
     
-    
     private CompanyResponse mapToResponse(Company company) {
         CompanyResponse response = new CompanyResponse();
         response.setId(company.getId());
@@ -66,7 +62,7 @@ public class CompanyService {
         response.setTaxId(company.getTaxId());
         response.setAddress(company.getAddress());
         response.setPhone(company.getPhone());
-        
+        // Пробрасываем новые поля в ответ
         response.setDescription(company.getDescription());
         response.setLogoUrl(company.getLogoUrl());
         response.setStatus(company.getStatus());
@@ -76,7 +72,6 @@ public class CompanyService {
         return response;
     }
 
-    
     public List<CompanyResponse> getCompaniesByOwner(UUID ownerId) {
         return companyRepository.findByOwnerId(ownerId).stream()
             .map(this::mapToResponse)

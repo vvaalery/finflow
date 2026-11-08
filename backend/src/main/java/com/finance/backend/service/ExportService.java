@@ -26,9 +26,6 @@ public class ExportService {
 
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
-    /**
-     * Экспорт транзакций счёта в Excel
-     */
     public byte[] exportTransactions(UUID accountId) {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new RuntimeException("Счёт не найден"));
@@ -77,9 +74,6 @@ public class ExportService {
         }
     }
 
-    /**
-     * Экспорт платежей компании в Excel
-     */
     public byte[] exportPayments(UUID companyId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new RuntimeException("Компания не найдена"));
@@ -130,9 +124,6 @@ public class ExportService {
         }
     }
 
-    /**
-     * Экспорт прогноза в Excel
-     */
     public byte[] exportForecast(UUID companyId, int months, String strategy) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new RuntimeException("Компания не найдена"));
@@ -178,9 +169,7 @@ public class ExportService {
             
             Row row7 = sheet.createRow(rowNum++);
             row7.createCell(0).setCellValue("Метод прогноза");
-            String normalizedStrategy = strategy == null ? "" : strategy.toLowerCase(java.util.Locale.ROOT);
-            String methodName = normalizedStrategy.contains("linear") ? "Линейная регрессия"
-                    : normalizedStrategy.contains("moving") ? "Скользящее среднее" : "Градиентный бустинг";
+            String methodName = "linearRegression".equals(strategy) ? "Линейная регрессия" : "Скользящее среднее";
             row7.createCell(1).setCellValue(methodName);
             
             Row emptyRow = sheet.createRow(rowNum++);

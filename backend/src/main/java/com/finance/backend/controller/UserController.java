@@ -3,10 +3,7 @@ package com.finance.backend.controller;
 import com.finance.backend.entity.User;
 import com.finance.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -14,35 +11,27 @@ import java.util.Map;
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
+
     private final UserRepository userRepository;
 
     @GetMapping("/profile")
-    public Map<String, Object> getProfile(Authentication authentication) {
-        User user = currentUser(authentication);
-        return profileView(user);
+    public User getProfile(@RequestParam String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
     }
 
     @PutMapping("/profile")
-    public Map<String, Object> updateProfile(@RequestBody Map<String, String> payload, Authentication authentication) {
-        User user = currentUser(authentication);
+    public User updateProfile(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
         String fullName = payload.get("fullName");
-        if (fullName == null || fullName.isBlank() || fullName.length() > 160) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Имя обязательно и не должно превышать 160 символов");
+        
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
+        
+        if (fullName != null) {
+            user.setFullName(fullName);
         }
-        user.setFullName(fullName.trim());
-        return profileView(userRepository.save(user));
-    }
-
-    private User currentUser(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Требуется авторизация");
-        }
-        return userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Пользователь не найден"));
-    }
-
-    private Map<String, Object> profileView(User user) {
-        return Map.of("id", user.getId(), "email", user.getEmail(), "fullName", user.getFullName(),
-                "role", user.getRole().getName(), "isActive", Boolean.TRUE.equals(user.getIsActive()));
+        
+        return userRepository.save(user);
     }
 }

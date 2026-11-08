@@ -1,17 +1,18 @@
 package com.finance.backend.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.finance.backend.dto.response.ForecastResponse;
+import com.finance.backend.analytics.*;
 import com.finance.backend.dto.response.ForecastPointResponse;
+import com.finance.backend.dto.response.ForecastResponse;
 import com.finance.backend.entity.CashFlowForecast;
 import com.finance.backend.entity.Company;
 import com.finance.backend.entity.ForecastItem;
-import com.finance.backend.entity.Transaction;
 import com.finance.backend.repository.CashFlowForecastRepository;
 import com.finance.backend.repository.CompanyRepository;
 import com.finance.backend.repository.ForecastItemRepository;
-import com.finance.backend.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,162 +20,224 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class ForecastService {
-    private final TransactionRepository transactionRepository;
+    public static final int MIN_HISTORY_MONTHS = 6;
+
     private final CompanyRepository companyRepository;
     private final CashFlowForecastRepository forecastRepository;
     private final ForecastItemRepository itemRepository;
+    private final CashFlowHistoryService historyService;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public ForecastResponse generateForecast(UUID companyId, int months, String strategy, Double multiplier) {
+        return generateForecast(companyId, months, ForecastMethod.parse(strategy), legacyScenario(strategy, multiplier));
+    }
+
+    @Transactional
+    public ForecastResponse generateForecast(UUID companyId, int months, ForecastMethod method, Scenario scenario) {
         if (months < 1 || months > 24) throw new IllegalArgumentException("Период прогноза: от 1 до 24 месяцев");
-        Company company = companyRepository.findById(companyId).orElseThrow(() -> new RuntimeException("Компания не найдена"));
-        String scenario = normalizeScenario(strategy, multiplier);
-        String algorithm = normalizeAlgorithm(strategy);
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusMonths(12).withDayOfMonth(1);
-        List<Transaction> history = transactionRepository.findByAccountCompanyIdAndDateBetween(companyId, startDate, endDate);
+        Company company = companyRepository.findById(companyId).orElseThrow(() -> new NoSuchElementException("Компания не найдена"));
 
-        List<BigDecimal> inflows = monthly(history, startDate, true);
-        List<BigDecimal> outflows = monthly(history, startDate, false);
-        double factor = switch (scenario) { case "OPTIMISTIC" -> 1.15; case "PESSIMISTIC" -> 0.85; default -> 1.0; };
+        CashFlowHistoryService.History history = historyService.load(companyId);
+        if (history.months() < MIN_HISTORY_MONTHS) {
+            throw new IllegalArgumentException("Недостаточно истории для прогноза: нужно минимум " + MIN_HISTORY_MONTHS
+                    + " завершённых месяцев с операциями в BYN, сейчас — " + history.months() + ".");
+        }
 
-        double projectedIn = project(inflows, months, algorithm) * factor;
-        double projectedOut = project(outflows, months, algorithm) * (scenario.equals("PESSIMISTIC") ? 1.10 : 1.0);
-        BigDecimal in = money(projectedIn), out = money(projectedOut), net = in.subtract(out);
-
-        CashFlowForecast forecast = new CashFlowForecast();
-        forecast.setCompany(company); forecast.setForecastPeriodStart(LocalDate.now()); forecast.setForecastPeriodEnd(LocalDate.now().plusMonths(months));
-        forecast.setTotalProjectedInflow(in); forecast.setTotalProjectedOutflow(out); forecast.setNetCashFlow(net);
-        forecast.setScenario(scenario); forecast.setStrategyUsed(algorithm);
-        ObjectNode params = objectMapper.createObjectNode(); params.put("algorithm", algorithm); params.put("scenario", scenario); params.put("historyMonths", 12); params.put("forecastMonths", months); params.put("learningRate", 0.05); params.put("estimators", 40); params.put("treeDepth", 1);
-        if ("GRADIENT_BOOSTING".equals(algorithm)) params.put("ensemble", "70% gradient boosting + 30% linear trend");
-        forecast.setParameters(params);
-        forecastRepository.save(forecast);
+        ForecastEngine.Result result = ForecastEngine.forecast(method, scenario, history.inflow(), history.outflow(), history.start(), months);
+        BigDecimal balance = historyService.baseCurrencyBalance(companyId);
 
         List<ForecastPointResponse> points = new ArrayList<>();
-        for (int i=1;i<=months;i++) {
-            BigDecimal monthlyIn = money(projectPoint(inflows, i, algorithm) * factor);
-            BigDecimal monthlyOut = money(projectPoint(outflows, i, algorithm) * (scenario.equals("PESSIMISTIC") ? 1.10 : 1.0));
-            ForecastItem item = new ForecastItem();
-            item.setForecast(forecast);
-            item.setForecastDate(LocalDate.now().plusMonths(i));
-            item.setProjectedInflow(monthlyIn);
-            item.setProjectedOutflow(monthlyOut);
-            itemRepository.save(item);
-            points.add(new ForecastPointResponse(item.getForecastDate(), monthlyIn, monthlyOut, monthlyIn.subtract(monthlyOut)));
+        BigDecimal totalIn = BigDecimal.ZERO, totalOut = BigDecimal.ZERO, running = balance;
+        for (ForecastEngine.Point p : result.points()) {
+            BigDecimal in = money(p.inflow()), out = money(p.outflow()), net = in.subtract(out);
+            running = running.add(net);
+            totalIn = totalIn.add(in); totalOut = totalOut.add(out);
+            points.add(new ForecastPointResponse(p.month().atDay(1), in, out, net,
+                    money(p.inflowLow()), money(p.inflowHigh()), money(p.outflowLow()), money(p.outflowHigh()),
+                    money(p.netLow()), money(p.netHigh()), running));
         }
-        ForecastResponse response = toResponse(forecast, months + " месяцев");
-        response.setItems(points);
+        BigDecimal totalNet = totalIn.subtract(totalOut);
+
+        CashFlowForecast forecast = new CashFlowForecast();
+        forecast.setCompany(company);
+        forecast.setForecastPeriodStart(points.get(0).getDate());
+        forecast.setForecastPeriodEnd(YearMonth.from(points.get(points.size() - 1).getDate()).atEndOfMonth());
+        forecast.setTotalProjectedInflow(totalIn); forecast.setTotalProjectedOutflow(totalOut); forecast.setNetCashFlow(totalNet);
+        forecast.setScenario(scenario.name()); forecast.setStrategyUsed(method.name());
+        forecast.setParameters(buildParameters(history, months, result, points, balance));
+        forecastRepository.save(forecast);
+
+        for (ForecastPointResponse p : points) {
+            ForecastItem item = new ForecastItem();
+            item.setForecast(forecast); item.setForecastDate(p.getDate());
+            item.setProjectedInflow(p.getInflow()); item.setProjectedOutflow(p.getOutflow());
+            itemRepository.save(item);
+        }
+
+        ForecastResponse response = baseResponse(forecast, points, history, balance);
+        response.setPeriod(months + " мес.");
+        response.setQuality(quality(result.quality()));
+        response.setModelParams(modelParams(result));
+        response.setWarnings(warnings(history, result));
+        response.setComparison(comparison(history, method));
         return response;
     }
 
-    private String normalizeScenario(String strategy, Double multiplier) {
-        if (strategy == null) return "BASE";
-        String s = strategy.toUpperCase(Locale.ROOT);
-        if (s.contains("OPTIMISTIC")) return "OPTIMISTIC";
-        if (s.contains("PESSIMISTIC")) return "PESSIMISTIC";
-        if (multiplier != null) return multiplier > 1 ? "OPTIMISTIC" : multiplier < 1 ? "PESSIMISTIC" : "BASE";
-        return "BASE";
-    }
-    private String normalizeAlgorithm(String strategy) {
-        if (strategy == null) return "GRADIENT_BOOSTING";
-        String s=strategy.toLowerCase(Locale.ROOT);
-        if (s.contains("moving")) return "MOVING_AVERAGE";
-        if (s.contains("linear")) return "LINEAR_REGRESSION";
-        return "GRADIENT_BOOSTING";
-    }
-    private List<BigDecimal> monthly(List<Transaction> history, LocalDate start, boolean income) {
-        Map<String,List<Transaction>> grouped=history.stream().collect(Collectors.groupingBy(t->t.getDate().withDayOfMonth(1).toString()));
-        List<BigDecimal> result=new ArrayList<>();
-        for(int i=0;i<12;i++){String key=start.plusMonths(i).withDayOfMonth(1).toString(); result.add(grouped.getOrDefault(key,List.of()).stream().filter(t->income?"INCOME".equals(t.getTransactionType()):"EXPENSE".equals(t.getTransactionType())).map(Transaction::getAmount).reduce(BigDecimal.ZERO,BigDecimal::add));}
-        return result;
-    }
-    private double project(List<BigDecimal> history, int months, String algorithm) {
-        double total = 0;
-        for (int step = 1; step <= months; step++) total += projectPoint(history, step, algorithm);
-        return total;
+    @Transactional(readOnly = true)
+    public List<ForecastResponse.ModelScore> compareMethods(UUID companyId, ForecastMethod selected) {
+        CashFlowHistoryService.History h = historyService.load(companyId);
+        if (h.months() < MIN_HISTORY_MONTHS) return List.of();
+        return comparison(h, selected);
     }
 
-    private double projectPoint(List<BigDecimal> history, int step, String algorithm) {
-        if (history.stream().allMatch(value -> value.compareTo(BigDecimal.ZERO) == 0)) return 0;
-        return switch (algorithm) {
-            case "MOVING_AVERAGE" -> history.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(0);
-            case "LINEAR_REGRESSION" -> linearPoint(history, step);
-            default -> gradientBoostingPoint(history, step);
-        };
+    @Transactional(readOnly = true)
+    public ForecastResponse getLatestForecast(UUID companyId) {
+        CashFlowForecast f = forecastRepository.findByCompanyIdOrderByCreatedAtDesc(companyId).stream().findFirst()
+                .orElseThrow(() -> new NoSuchElementException("Прогнозы не найдены"));
+        return restore(f);
     }
 
-    private double linearPoint(List<BigDecimal> history, int step) {
-        int n = history.size();
-        double sx = 0, sy = 0, sxy = 0, sx2 = 0;
-        for (int i = 0; i < n; i++) {
-            double x = i + 1, y = history.get(i).doubleValue();
-            sx += x; sy += y; sxy += x * y; sx2 += x * x;
-        }
-        double denominator = n * sx2 - sx * sx;
-        if (denominator == 0) return history.stream().mapToDouble(BigDecimal::doubleValue).average().orElse(0);
-        double slope = (n * sxy - sx * sy) / denominator;
-        double intercept = (sy - slope * sx) / n;
-        return Math.max(0, slope * (n + step) + intercept);
+    @Transactional(readOnly = true)
+    public List<ForecastResponse> getForecastHistory(UUID companyId) {
+        return forecastRepository.findByCompanyIdOrderByCreatedAtDesc(companyId).stream().map(this::restore).toList();
     }
 
-    /** Gradient boosting regression with an additive ensemble of shallow regression trees. */
-    private double gradientBoostingPoint(List<BigDecimal> history, int step) {
-        int n = history.size();
-        double[] y = new double[n];
-        for (int i = 0; i < n; i++) y[i] = history.get(i).doubleValue();
-        double base = Arrays.stream(y).average().orElse(0);
-        double[] predictions = new double[n];
-        Arrays.fill(predictions, base);
-        List<Stump> ensemble = new ArrayList<>();
-        double learningRate = 0.05;
-        for (int iteration = 0; iteration < 40; iteration++) {
-            double[] residuals = new double[n];
-            for (int i = 0; i < n; i++) residuals[i] = y[i] - predictions[i];
-            Stump best = null;
-            double bestLoss = Double.POSITIVE_INFINITY;
-            for (int threshold = 1; threshold < n; threshold++) {
-                double leftSum = 0, rightSum = 0;
-                int leftCount = 0, rightCount = 0;
-                for (int i = 0; i < n; i++) {
-                    if (i < threshold) { leftSum += residuals[i]; leftCount++; }
-                    else { rightSum += residuals[i]; rightCount++; }
-                }
-                double leftValue = leftCount == 0 ? 0 : leftSum / leftCount;
-                double rightValue = rightCount == 0 ? 0 : rightSum / rightCount;
-                double loss = 0;
-                for (int i = 0; i < n; i++) {
-                    double error = residuals[i] - (i < threshold ? leftValue : rightValue);
-                    loss += error * error;
-                }
-                if (loss < bestLoss) { bestLoss = loss; best = new Stump(threshold, leftValue, rightValue); }
+    private ForecastResponse restore(CashFlowForecast f) {
+        JsonNode params = f.getParameters();
+        Map<LocalDate, JsonNode> stored = new HashMap<>();
+        if (params != null && params.has("points")) for (JsonNode n : params.get("points")) stored.put(LocalDate.parse(n.get("date").asText()), n);
+        List<ForecastPointResponse> points = new ArrayList<>();
+        for (ForecastItem i : itemRepository.findByForecastIdOrderByForecastDate(f.getId())) {
+            BigDecimal in = i.getProjectedInflow(), out = i.getProjectedOutflow();
+            ForecastPointResponse p = new ForecastPointResponse(i.getForecastDate(), in, out, in.subtract(out));
+            JsonNode n = stored.get(i.getForecastDate());
+            if (n != null) {
+                p.setInflowLow(dec(n, "inflowLow")); p.setInflowHigh(dec(n, "inflowHigh"));
+                p.setOutflowLow(dec(n, "outflowLow")); p.setOutflowHigh(dec(n, "outflowHigh"));
+                p.setNetLow(dec(n, "netLow")); p.setNetHigh(dec(n, "netHigh")); p.setProjectedBalance(dec(n, "projectedBalance"));
             }
-            if (best == null) break;
-            ensemble.add(best);
-            for (int i = 0; i < n; i++) predictions[i] += learningRate * best.predict(i);
+            points.add(p);
         }
-        int futureIndex = n + step - 1;
-        double treePrediction = base;
-        for (Stump tree : ensemble) treePrediction += learningRate * tree.predict(futureIndex);
-        // Tree models are piecewise constant beyond the training range. Blend in a
-        // modest linear trend so monthly forecasts do not collapse to one flat value.
-        double trendPrediction = linearPoint(history, step);
-        return Math.max(0, treePrediction * 0.70 + trendPrediction * 0.30);
+        CashFlowHistoryService.History history = historyService.load(f.getCompany().getId());
+        BigDecimal balance = params != null && params.has("currentBalance") ? new BigDecimal(params.get("currentBalance").asText())
+                : historyService.baseCurrencyBalance(f.getCompany().getId());
+        ForecastResponse r = baseResponse(f, points, history, balance);
+        r.setPeriod(f.getForecastPeriodStart() + " — " + f.getForecastPeriodEnd());
+        if (params != null && params.has("quality")) {
+            JsonNode q = params.get("quality");
+            r.setQuality(new ForecastResponse.Quality(q.path("available").asBoolean(false), q.path("windows").asInt(0),
+                    dbl(q, "mae"), dbl(q, "rmse"), dbl(q, "wape"), q.path("note").asText(null)));
+        }
+        if (params != null && params.has("modelParams")) r.setModelParams(objectMapper.convertValue(params.get("modelParams"), Map.class));
+        return r;
     }
 
-    private record Stump(int threshold, double left, double right) {
-        double predict(int x) { return x < threshold ? left : right; }
+    private ForecastResponse baseResponse(CashFlowForecast f, List<ForecastPointResponse> points,
+                                          CashFlowHistoryService.History history, BigDecimal balance) {
+        ForecastMethod m = ForecastMethod.parse(f.getStrategyUsed());
+        ForecastResponse r = new ForecastResponse();
+        r.setId(f.getId());
+        r.setTotalProjectedInflow(f.getTotalProjectedInflow()); r.setTotalProjectedOutflow(f.getTotalProjectedOutflow());
+        r.setNetCashFlow(f.getNetCashFlow());
+        r.setStrategyUsed(m.label + " / " + f.getScenario());
+        r.setMethod(m.name()); r.setMethodLabel(m.label); r.setMethodFamily(m.family); r.setScenario(f.getScenario());
+        r.setItems(points);
+        r.setCurrentBalance(balance);
+        r.setProjectedClosingBalance(points.isEmpty() ? balance : points.get(points.size() - 1).getProjectedBalance());
+        List<ForecastResponse.HistoryPoint> hp = new ArrayList<>();
+        int from = Math.max(0, history.months() - 12);
+        for (int i = from; i < history.months(); i++) {
+            BigDecimal in = money(history.inflow()[i]), out = money(history.outflow()[i]);
+            hp.add(new ForecastResponse.HistoryPoint(history.start().plusMonths(i).atDay(1), in, out, in.subtract(out)));
+        }
+        r.setHistory(hp);
+        return r;
     }
-    private BigDecimal money(double v){return BigDecimal.valueOf(Math.max(0,v)).setScale(2,RoundingMode.HALF_UP);}
 
-    public ForecastResponse getLatestForecast(UUID companyId){return forecastRepository.findByCompanyIdOrderByCreatedAtDesc(companyId).stream().findFirst().map(f->toResponse(f,f.getForecastPeriodStart()+" - "+f.getForecastPeriodEnd())).orElseThrow(()->new RuntimeException("Прогнозы не найдены"));}
-    public List<ForecastResponse> getForecastHistory(UUID companyId){return forecastRepository.findByCompanyIdOrderByCreatedAtDesc(companyId).stream().map(f->toResponse(f,f.getForecastPeriodStart()+" - "+f.getForecastPeriodEnd())).toList();}
-    private ForecastResponse toResponse(CashFlowForecast f,String period){ForecastResponse r=new ForecastResponse();r.setId(f.getId());r.setTotalProjectedInflow(f.getTotalProjectedInflow());r.setTotalProjectedOutflow(f.getTotalProjectedOutflow());r.setNetCashFlow(f.getNetCashFlow());r.setStrategyUsed(f.getStrategyUsed()+" / "+f.getScenario());r.setPeriod(period);r.setItems(itemRepository.findByForecastIdOrderByForecastDate(f.getId()).stream().map(i -> new ForecastPointResponse(i.getForecastDate(), i.getProjectedInflow(), i.getProjectedOutflow(), i.getProjectedInflow().subtract(i.getProjectedOutflow()))).toList());return r;}
+    private ObjectNode buildParameters(CashFlowHistoryService.History history, int months, ForecastEngine.Result result,
+                                       List<ForecastPointResponse> points, BigDecimal balance) {
+        ObjectNode params = objectMapper.createObjectNode();
+        params.put("algorithm", result.method().name()); params.put("scenario", result.scenario().name());
+        params.put("historyMonths", history.months()); params.put("forecastMonths", months);
+        params.put("currentBalance", balance.toPlainString());
+        params.set("modelParams", objectMapper.valueToTree(modelParams(result)));
+        ForecastResponse.Quality q = quality(result.quality());
+        params.set("quality", objectMapper.valueToTree(q));
+        ArrayNode arr = params.putArray("points");
+        for (ForecastPointResponse p : points) {
+            ObjectNode n = arr.addObject();
+            n.put("date", p.getDate().toString());
+            n.put("inflowLow", p.getInflowLow()); n.put("inflowHigh", p.getInflowHigh());
+            n.put("outflowLow", p.getOutflowLow()); n.put("outflowHigh", p.getOutflowHigh());
+            n.put("netLow", p.getNetLow()); n.put("netHigh", p.getNetHigh());
+            n.put("projectedBalance", p.getProjectedBalance());
+        }
+        return params;
+    }
+
+    private Map<String, Object> modelParams(ForecastEngine.Result r) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("inflow", r.inflowParams());
+        m.put("outflow", r.outflowParams());
+        return m;
+    }
+
+    private ForecastResponse.Quality quality(Backtester.Result q) {
+        if (!q.available()) return new ForecastResponse.Quality(false, 0, null, null, null,
+                "Для оценки точности нужно минимум 7 месяцев истории");
+        Backtester.Metrics n = q.net();
+        return new ForecastResponse.Quality(true, q.windows(), round(n.mae()), round(n.rmse()), round(n.wape() * 100),
+                "Скользящий бэктест по чистому потоку: прогноз на 1–3 месяца вперёд на исторических окнах");
+    }
+
+    private List<ForecastResponse.ModelScore> comparison(CashFlowHistoryService.History h, ForecastMethod selected) {
+        List<ForecastEngine.Score> scores = ForecastEngine.compare(h.inflow(), h.outflow(), h.start());
+        ForecastEngine.Score best = scores.isEmpty() || !scores.get(0).quality().available() ? null : scores.get(0);
+        List<ForecastResponse.ModelScore> out = new ArrayList<>();
+        for (ForecastEngine.Score s : scores) {
+            boolean ok = s.quality().available();
+            Backtester.Metrics n = s.quality().net();
+            out.add(new ForecastResponse.ModelScore(s.method().name(), s.method().label, s.method().family,
+                    s.method() == selected, best != null && s == best,
+                    ok ? round(n.wape() * 100) : null, ok ? round(n.mae()) : null, ok ? round(n.rmse()) : null));
+        }
+        return out;
+    }
+
+    private List<String> warnings(CashFlowHistoryService.History h, ForecastEngine.Result r) {
+        List<String> w = new ArrayList<>();
+        if (h.months() < 12) w.add("История короче 12 месяцев — прогноз менее надёжен, интервалы шире реальных.");
+        if (h.months() < 24 && r.method() == ForecastMethod.HOLT_WINTERS) w.add("Сезонность не учитывается: для неё нужно минимум 24 месяца истории.");
+        if (h.months() < 24 && r.method() == ForecastMethod.GRADIENT_BOOSTING) w.add("Сезонные признаки бустинга включаются при истории от 24 месяцев.");
+        if (h.excludedOtherCurrency() > 0) w.add("Операции в иностранной валюте (" + h.excludedOtherCurrency() + ") не вошли в расчёт: без курса валют их нельзя суммировать с BYN.");
+        if (!r.quality().available()) w.add("Точность модели не оценена: недостаточно истории для бэктеста.");
+        return w;
+    }
+
+    private static Scenario legacyScenario(String strategy, Double multiplier) {
+        if (strategy != null) {
+            String s = strategy.toUpperCase(Locale.ROOT);
+            if (s.contains("OPTIMISTIC")) return Scenario.OPTIMISTIC;
+            if (s.contains("PESSIMISTIC")) return Scenario.PESSIMISTIC;
+        }
+        if (multiplier != null) return multiplier > 1 ? Scenario.OPTIMISTIC : multiplier < 1 ? Scenario.PESSIMISTIC : Scenario.BASE;
+        return Scenario.BASE;
+    }
+
+    public static Scenario parseScenario(String raw) {
+        if (raw == null || raw.isBlank()) return Scenario.BASE;
+        try { return Scenario.valueOf(raw.toUpperCase(Locale.ROOT)); } catch (IllegalArgumentException e) { return Scenario.BASE; }
+    }
+
+    private static BigDecimal money(double v) { return BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP); }
+    private static Double round(double v) { return Double.isNaN(v) || Double.isInfinite(v) ? null : Math.round(v * 100d) / 100d; }
+    private static BigDecimal dec(JsonNode n, String f) { return n.hasNonNull(f) ? new BigDecimal(n.get(f).asText()) : null; }
+    private static Double dbl(JsonNode n, String f) { return n.hasNonNull(f) ? n.get(f).asDouble() : null; }
 }

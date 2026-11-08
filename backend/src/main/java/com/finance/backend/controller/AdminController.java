@@ -8,8 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -42,13 +40,7 @@ public class AdminController {
         String email = (String) payload.get("email");
         String password = (String) payload.get("password");
         String fullName = (String) payload.get("fullName");
-        Integer roleId = payload.get("roleId") instanceof Number n ? n.intValue() : null;
-        if (email == null || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$") || userRepository.existsByEmail(email)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Укажите уникальный корректный email");
-        }
-        if (password == null || password.length() < 8 || fullName == null || fullName.isBlank() || roleId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Имя, роль и пароль не короче 8 символов обязательны");
-        }
+        Integer roleId = (Integer) payload.get("roleId");
 
         Role role = roleRepository.findById(roleId)
                 .orElseThrow(() -> new RuntimeException("Роль не найдена"));

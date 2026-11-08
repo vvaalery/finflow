@@ -4,6 +4,7 @@ import com.finance.backend.repository.TransactionRepository;
 import com.finance.backend.repository.UserRepository;
 import com.finance.backend.repository.CompanyRepository;
 import com.finance.backend.repository.PaymentCalendarRepository;
+import com.finance.backend.service.AnalyticsInsightsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,6 +23,7 @@ public class AnalyticsController {
     private final CompanyRepository companyRepository;
     private final TransactionRepository transactionRepository;
     private final PaymentCalendarRepository paymentRepository;
+    private final AnalyticsInsightsService insightsService;
 
     @GetMapping("/stats")
     public Map<String, Object> getStats() {
@@ -70,5 +72,10 @@ public class AnalyticsController {
     public List<Map<String, Object>> getCategoryDistribution() {
         List<Map<String, Object>> distribution = transactionRepository.findAllCategoryDistribution();
         return distribution != null ? distribution : new ArrayList<>();
+    }
+
+    @GetMapping("/insights")
+    public AnalyticsInsightsService.Insights getInsights(@RequestParam UUID companyId) {
+        return insightsService.insights(companyId);
     }
 }

@@ -20,7 +20,6 @@ public class CompanyController {
     
     private final CompanyService companyService;
     
-    
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER','DIRECTOR')")
     public List<CompanyResponse> getCompanies(@RequestParam UUID ownerId, Authentication authentication) {
@@ -28,13 +27,11 @@ public class CompanyController {
         return director ? companyService.getAllCompanies() : companyService.getCompaniesByOwner(ownerId);
     }
     
-    
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER','DIRECTOR')")
     public CompanyResponse getCompanyById(@PathVariable UUID id) {
         return companyService.getCompanyById(id);
     }
-    
     
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER')")
@@ -45,7 +42,6 @@ public class CompanyController {
         return companyService.createCompany(ownerId, request);
     }
     
-    
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER')")
     public CompanyResponse updateCompany(
@@ -53,7 +49,6 @@ public class CompanyController {
             @Valid @RequestBody CompanyRequest request) {
         return companyService.updateCompany(id, request);
     }
-    
     
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER')")

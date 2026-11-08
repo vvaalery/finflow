@@ -6,6 +6,5 @@ import java.util.UUID;
 import java.util.List;
 
 public interface PaymentRequestRepository extends JpaRepository<PaymentRequest, UUID> {
-    
     List<PaymentRequest> findAllByOrderByDateDesc();
 }

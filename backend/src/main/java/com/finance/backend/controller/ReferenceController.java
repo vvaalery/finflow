@@ -21,7 +21,6 @@ public class ReferenceController {
     private final ReferenceCashFlowItemRepository cashFlowItemRepository;
     private final ReferenceCounterpartyRepository counterpartyRepository;
 
-    
     @GetMapping("/cfo")
     public List<ReferenceCFO> getAllCFO() {
         return cfoRepository.findAll();
@@ -46,7 +45,6 @@ public class ReferenceController {
         cfoRepository.deleteById(id);
     }
 
-    
     @GetMapping("/cash-flow-items")
     public List<ReferenceCashFlowItem> getAllCashFlowItems() {
         return cashFlowItemRepository.findAll();
@@ -72,7 +70,6 @@ public class ReferenceController {
         cashFlowItemRepository.deleteById(id);
     }
 
-    
     @GetMapping("/counterparties")
     public List<ReferenceCounterparty> getAllCounterparties() {
         return counterpartyRepository.findAll();

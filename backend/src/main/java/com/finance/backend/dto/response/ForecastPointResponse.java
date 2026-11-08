@@ -14,4 +14,15 @@ public class ForecastPointResponse {
     private BigDecimal inflow;
     private BigDecimal outflow;
     private BigDecimal netCashFlow;
+    private BigDecimal inflowLow;
+    private BigDecimal inflowHigh;
+    private BigDecimal outflowLow;
+    private BigDecimal outflowHigh;
+    private BigDecimal netLow;
+    private BigDecimal netHigh;
+    private BigDecimal projectedBalance;
+
+    public ForecastPointResponse(LocalDate date, BigDecimal inflow, BigDecimal outflow, BigDecimal netCashFlow) {
+        this.date = date; this.inflow = inflow; this.outflow = outflow; this.netCashFlow = netCashFlow;
+    }
 }

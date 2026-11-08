@@ -36,12 +36,10 @@ public class TransactionService {
         transaction.setCategory(request.getCategory());
         transaction.setDate(request.getDate() != null ? request.getDate() : LocalDate.now());
         
-        // Добавить cfoId, если есть в запросе
         if (request.getCfoId() != null) {
             transaction.setCfoId(request.getCfoId());
         }
         
-        // Обновляем баланс счета
         if ("INCOME".equals(request.getType())) {
             account.setBalance(account.getBalance().add(request.getAmount()));
         } else if ("EXPENSE".equals(request.getType())) {
@@ -74,7 +72,6 @@ public class TransactionService {
         response.setDescription(transaction.getDescription());
         response.setCategory(transaction.getCategory());
         
-        // Добавить cfoId в ответ
         if (transaction.getCfoId() != null) {
             response.setCfoId(transaction.getCfoId().toString());
         }

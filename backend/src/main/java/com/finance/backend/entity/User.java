@@ -1,7 +1,6 @@
 package com.finance.backend.entity;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -25,7 +24,6 @@ public class User {
     @Column(name = "email", nullable = false, unique = true)
     private String email;
     
-    @JsonIgnore
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
     
