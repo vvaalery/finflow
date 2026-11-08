@@ -10,7 +10,7 @@ apiClient.interceptors.request.use((config) => {
       const parsed = JSON.parse(auth);
       const token = parsed?.state?.user?.token;
       if (token) config.headers.Authorization = `Bearer ${token}`;
-    } catch { /* ignore malformed local storage */ }
+    } catch {}
   }
   return config;
 });

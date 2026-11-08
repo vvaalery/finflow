@@ -1,3 +1,4 @@
+
 package com.finance.backend.config;
 
 import com.finance.backend.security.JwtAuthenticationFilter;
@@ -55,7 +56,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/actuator/health", "/graphiql").permitAll()
+                .requestMatchers("/api/auth/**", "/actuator/health", "/graphiql", "/graphql").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )

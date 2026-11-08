@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,22 +16,21 @@ import java.util.UUID;
 @RequestMapping("/api/companies")
 @RequiredArgsConstructor
 public class CompanyController {
-    
+
     private final CompanyService companyService;
-    
+
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER','DIRECTOR')")
-    public List<CompanyResponse> getCompanies(@RequestParam UUID ownerId, Authentication authentication) {
-        boolean director = authentication.getAuthorities().stream().anyMatch(authority -> "ROLE_DIRECTOR".equals(authority.getAuthority()));
-        return director ? companyService.getAllCompanies() : companyService.getCompaniesByOwner(ownerId);
+    public List<CompanyResponse> getCompanies() {
+        return companyService.getAllCompanies();
     }
-    
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER','DIRECTOR')")
     public CompanyResponse getCompanyById(@PathVariable UUID id) {
         return companyService.getCompanyById(id);
     }
-    
+
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER')")
     @ResponseStatus(HttpStatus.CREATED)
@@ -41,7 +39,7 @@ public class CompanyController {
             @Valid @RequestBody CompanyRequest request) {
         return companyService.createCompany(ownerId, request);
     }
-    
+
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER')")
     public CompanyResponse updateCompany(
@@ -49,7 +47,7 @@ public class CompanyController {
             @Valid @RequestBody CompanyRequest request) {
         return companyService.updateCompany(id, request);
     }
-    
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER')")
     @ResponseStatus(HttpStatus.NO_CONTENT)

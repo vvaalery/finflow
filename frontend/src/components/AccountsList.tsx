@@ -22,15 +22,14 @@ const AccountsList: React.FC = () => {
 
   const canEdit = ['ROLE_ADMIN', 'ROLE_FINANCIAL_MANAGER', 'ROLE_FINANCE_MANAGER', 'ADMIN', 'FINANCIAL_MANAGER', 'FINANCE_MANAGER'].includes(user?.role || '');
 
-  
   const commonInputStyle = {
     height: '48px',
     width: '100%',
     padding: '12px 14px',
-    border: '1px solid #d4e2ef',
+    border: '1px solid #d5d9de',
     borderRadius: '12px',
     fontSize: '14px',
-    boxSizing: 'border-box' as const, // Критично для одинаковой высоты
+    boxSizing: 'border-box' as const, 
     background: 'white',
     color: '#333'
   };
@@ -118,8 +117,8 @@ const AccountsList: React.FC = () => {
                     disabled
                     style={{ 
                         ...commonInputStyle, 
-                        background: '#f5f7fa', 
-                        color: '#1c2e43', 
+                        background: '#f6f7f8', 
+                        color: '#101418', 
                         fontWeight: '600',
                         border: '1px dashed #cbd5e0'
                     }}

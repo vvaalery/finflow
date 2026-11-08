@@ -42,7 +42,7 @@ const TransactionsList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   
-  
+  // Фильтры
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -208,7 +208,7 @@ const TransactionsList: React.FC = () => {
   const expenseItems = cashFlowItems.filter(item => item.type === 'EXPENSE');
 
   const inputStyle = {
-    width: '100%', padding: '12px 14px', border: '1px solid #d4e2ef', borderRadius: '14px',
+    width: '100%', padding: '12px 14px', border: '1px solid #d5d9de', borderRadius: '14px',
     fontSize: '14px', boxSizing: 'border-box' as const, height: '48px'
   };
 
@@ -272,8 +272,8 @@ const TransactionsList: React.FC = () => {
         </>
       )}
 
-      
-      <div style={{ marginBottom: '20px', padding: '20px', background: '#f8fbfe', borderRadius: '16px', border: '1px solid #e2edf7', marginTop: '20px' }}>
+      {/* Фильтры */}
+      <div style={{ marginBottom: '20px', padding: '20px', background: '#f6f7f8', borderRadius: '16px', border: '1px solid #e7e9ec', marginTop: '20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
           <div style={{ flex: 2, minWidth: '200px' }}>
             <input type="text" placeholder=" Поиск..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ ...inputStyle, width: '100%' }} />

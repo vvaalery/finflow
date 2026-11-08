@@ -124,7 +124,7 @@ const References: React.FC = () => {
   const inputStyle = {
     width: '100%',
     padding: '12px 14px',
-    border: '1px solid #d4e2ef',
+    border: '1px solid #d5d9de',
     borderRadius: '14px',
     fontSize: '14px',
     boxSizing: 'border-box' as const,
@@ -306,25 +306,25 @@ const References: React.FC = () => {
     <div className="card">
       <h2> Справочники</h2>
       
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', borderBottom: '1px solid #e2edf7', paddingBottom: '15px' }}>
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '25px', borderBottom: '1px solid #e7e9ec', paddingBottom: '15px' }}>
         <button
           onClick={() => setActiveSection('cfo')}
           className={activeSection === 'cfo' ? 'btn-primary' : 'btn-secondary'}
-          style={activeSection === 'cfo' ? { background: '#1d796c' } : {}}
+          style={activeSection === 'cfo' ? { background: '#1f7a5a' } : {}}
         >
            ЦФО
         </button>
         <button
           onClick={() => setActiveSection('cashflow')}
           className={activeSection === 'cashflow' ? 'btn-primary' : 'btn-secondary'}
-          style={activeSection === 'cashflow' ? { background: '#1d796c' } : {}}
+          style={activeSection === 'cashflow' ? { background: '#1f7a5a' } : {}}
         >
            Статьи ДДС
         </button>
         <button
           onClick={() => setActiveSection('counterparties')}
           className={activeSection === 'counterparties' ? 'btn-primary' : 'btn-secondary'}
-          style={activeSection === 'counterparties' ? { background: '#1d796c' } : {}}
+          style={activeSection === 'counterparties' ? { background: '#1f7a5a' } : {}}
         >
            Контрагенты
         </button>
@@ -345,12 +345,12 @@ const References: React.FC = () => {
           style={{ 
             marginBottom: '30px', 
             padding: '25px', 
-            background: '#f8fbfe', 
-            borderRadius: '20px', 
+            background: '#f6f7f8', 
+            borderRadius: '12px', 
             border: '1px solid rgba(90, 155, 192, 0.2)' 
           }}
         >
-          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#1c2e43' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '20px', color: '#101418' }}>
             {editingItem ? ' Редактирование' : ' Новая запись'}
           </h3>
           {renderFormFields()}
@@ -370,8 +370,8 @@ const References: React.FC = () => {
       )}
       
       {loading ? (
-        <div className="loading" style={{ textAlign: 'center', padding: '40px', color: '#8792a2' }}>
-          ⏳ Загрузка справочника...
+        <div className="loading" style={{ textAlign: 'center', padding: '40px', color: '#7a838d' }}>
+          Загрузка справочника...
         </div>
       ) : (
         renderTable()

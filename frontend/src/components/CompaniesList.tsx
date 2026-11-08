@@ -24,7 +24,6 @@ const CompaniesList: React.FC = () => {
 
   const canEdit = ['ROLE_ADMIN', 'ROLE_FINANCIAL_MANAGER', 'ROLE_FINANCE_MANAGER', 'ADMIN', 'FINANCIAL_MANAGER', 'FINANCE_MANAGER'].includes(user?.role || '');
   
-  
   const tags = ['UI/UX Design', 'Branding', 'Mobile Apps', 'Web Design', 'SaaS Systems', 'Prototyping'];
 
   useEffect(() => {
@@ -71,18 +70,18 @@ const CompaniesList: React.FC = () => {
   if (loading) return <div className="loading">Загрузка данных студии...</div>;
 
   return (
-    <div className="company-container" style={{ padding: '20px', minHeight: '100vh', background: '#f0f4f8' }}>
+    <div className="company-container" style={{ padding: '20px', minHeight: '100vh', background: '#f6f7f8' }}>
       {companies.map((company) => (
         <div key={company.id} className="card" style={{ 
           maxWidth: '1000px', 
           margin: '0 auto', 
           padding: '40px',
-          borderRadius: '24px',
+          borderRadius: '14px',
           boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
           background: 'white'
         }}>
           
-          
+          {/* Header Section */}
           <div style={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -93,8 +92,8 @@ const CompaniesList: React.FC = () => {
               <div style={{ 
                 width: '100px', 
                 height: '100px', 
-                borderRadius: '24px', 
-                background: 'linear-gradient(135deg, #1d796c 0%, #2c8b7e 100%)',
+                borderRadius: '14px', 
+                background: 'linear-gradient(135deg, #1f7a5a 0%, #2c8b7e 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -108,10 +107,10 @@ const CompaniesList: React.FC = () => {
                 )}
               </div>
               <div>
-                <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', color: '#1e293b', fontWeight: '800' }}>{company.name}</h1>
+                <h1 style={{ margin: '0 0 8px 0', fontSize: '32px', color: '#101418', fontWeight: '800' }}>{company.name}</h1>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <span style={statusBadgeStyle}>● {company.status || 'ACTIVE'}</span>
-                  <span style={{ color: '#64748b', fontSize: '14px' }}>IT & Digital Design</span>
+                  <span style={{ color: '#7a838d', fontSize: '14px' }}>IT & Digital Design</span>
                 </div>
               </div>
             </div>
@@ -122,13 +121,13 @@ const CompaniesList: React.FC = () => {
             )}
           </div>
 
-          
+          {/* Main Layout */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '40px' }}>
             
             <div className="left-col">
               <section style={{ marginBottom: '32px' }}>
                 <h3 style={sectionTitleStyle}>О компании</h3>
-                <p style={{ lineHeight: '1.8', color: '#475569', fontSize: '16px', margin: 0 }}>
+                <p style={{ lineHeight: '1.8', color: '#3b434c', fontSize: '16px', margin: 0 }}>
                   {company.description || 'Описание в процессе наполнения...'}
                 </p>
               </section>
@@ -149,7 +148,7 @@ const CompaniesList: React.FC = () => {
                 </div>
                 <div style={infoCardStyle}>
                   <span style={infoLabelStyle}>Контактный телефон</span>
-                  <a href={`tel:${company.phone}`} style={{ ...infoValueStyle, color: '#1d796c', textDecoration: 'none' }}>{company.phone || '—'}</a>
+                  <a href={`tel:${company.phone}`} style={{ ...infoValueStyle, color: '#1f7a5a', textDecoration: 'none' }}>{company.phone || '—'}</a>
                 </div>
               </div>
             </div>
@@ -157,10 +156,10 @@ const CompaniesList: React.FC = () => {
             <div className="right-col">
               <h3 style={sectionTitleStyle}>Локация</h3>
               <div style={{ 
-                borderRadius: '20px', 
+                borderRadius: '12px', 
                 overflow: 'hidden', 
                 height: '220px', 
-                border: '1px solid #e2e8f0',
+                border: '1px solid #e7e9ec',
                 marginBottom: '16px'
               }}>
                 <iframe 
@@ -170,16 +169,16 @@ const CompaniesList: React.FC = () => {
                   src={`https://maps.google.com/maps?q=${encodeURIComponent(company.address || 'London')}&t=&z=14&ie=UTF8&iwloc=&output=embed`}
                 ></iframe>
               </div>
-              <p style={{ fontSize: '14px', color: '#64748b', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <p style={{ fontSize: '14px', color: '#7a838d', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <span></span> {company.address || 'Адрес не указан'}
               </p>
             </div>
           </div>
 
-          
+          {/* Modal Edit Form */}
           {editingCompany && (
             <div style={modalOverlayStyle}>
-              <div className="card" style={{ width: '550px', padding: '32px', borderRadius: '24px' }}>
+              <div className="card" style={{ width: '550px', padding: '32px', borderRadius: '14px' }}>
                 <h2 style={{ marginBottom: '24px' }}>Редактирование профиля</h2>
                 <form onSubmit={updateCompany} className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                   <div className="form-group">
@@ -216,12 +215,11 @@ const CompaniesList: React.FC = () => {
   );
 };
 
-
 const statusBadgeStyle = {
-  background: '#ecfdf5',
+  background: '#e9f3ee',
   color: '#059669',
   padding: '4px 12px',
-  borderRadius: '20px',
+  borderRadius: '12px',
   fontSize: '12px',
   fontWeight: '700',
 };
@@ -230,31 +228,31 @@ const sectionTitleStyle = {
   fontSize: '13px',
   textTransform: 'uppercase' as const,
   letterSpacing: '1px',
-  color: '#94a3b8',
+  color: '#a4abb3',
   marginBottom: '16px'
 };
 
 const tagStyle = {
-  background: '#f1f5f9',
-  color: '#475569',
+  background: '#f1f3f4',
+  color: '#3b434c',
   padding: '6px 14px',
   borderRadius: '10px',
   fontSize: '13px',
   fontWeight: '600',
-  border: '1px solid #e2e8f0'
+  border: '1px solid #e7e9ec'
 };
 
 const infoCardStyle = {
-  background: '#f8fafc',
+  background: '#f6f7f8',
   padding: '16px',
   borderRadius: '16px',
-  border: '1px solid #f1f5f9'
+  border: '1px solid #f1f3f4'
 };
 
 const infoLabelStyle = {
   display: 'block',
   fontSize: '11px',
-  color: '#94a3b8',
+  color: '#a4abb3',
   fontWeight: '700',
   marginBottom: '4px',
   textTransform: 'uppercase' as const
@@ -262,7 +260,7 @@ const infoLabelStyle = {
 
 const infoValueStyle = {
   fontSize: '15px',
-  color: '#1e293b',
+  color: '#101418',
   fontWeight: '600'
 };
 
@@ -270,7 +268,7 @@ const inputStyle = {
   width: '100%',
   padding: '12px 16px',
   borderRadius: '12px',
-  border: '1px solid #e2e8f0',
+  border: '1px solid #e7e9ec',
   fontSize: '14px',
   boxSizing: 'border-box' as const
 };

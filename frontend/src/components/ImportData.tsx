@@ -23,7 +23,7 @@ const ImportData: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [companyName, setCompanyName] = useState<string>('');
-  const [companyId, setCompanyId] = useState<string>(''); // <-- ДОБАВИТЬ
+  const [companyId, setCompanyId] = useState<string>(''); 
 
   useEffect(() => {
     loadCompanyAndAccounts();
@@ -38,7 +38,7 @@ const ImportData: React.FC = () => {
       if (companiesRes.data.length > 0) {
         const firstCompany = companiesRes.data[0];
         setCompanyName(firstCompany.name);
-        setCompanyId(firstCompany.id); // <-- ДОБАВИТЬ
+        setCompanyId(firstCompany.id); 
         
         const accountsRes = await apiClient.get(`/accounts?companyId=${firstCompany.id}`);
         setAccounts(accountsRes.data);
@@ -66,7 +66,7 @@ const ImportData: React.FC = () => {
         return;
       }
       formData.append('accountId', selectedAccount);
-    } else if (type === 'payments') { // <-- ДОБАВИТЬ
+    } else if (type === 'payments') { 
       if (!companyId) {
         alert('Компания не найдена');
         setLoading(false);
@@ -91,7 +91,7 @@ const ImportData: React.FC = () => {
   const inputStyle = {
     width: '100%',
     padding: '12px 14px',
-    border: '1px solid #d4e2ef',
+    border: '1px solid #d5d9de',
     borderRadius: '14px',
     fontSize: '14px',
     boxSizing: 'border-box' as const,
@@ -124,7 +124,7 @@ const ImportData: React.FC = () => {
                   type="text"
                   value={companyName}
                   disabled
-                  style={{ ...inputStyle, background: '#f5f7fa', color: '#1c2e43', fontWeight: '500' }}
+                  style={{ ...inputStyle, background: '#f6f7f8', color: '#101418', fontWeight: '500' }}
                 />
               </div>
               
@@ -152,7 +152,7 @@ const ImportData: React.FC = () => {
                 type="text"
                 value={companyName}
                 disabled
-                style={{ ...inputStyle, background: '#f5f7fa', color: '#1c2e43', fontWeight: '500' }}
+                style={{ ...inputStyle, background: '#f6f7f8', color: '#101418', fontWeight: '500' }}
               />
             </div>
           )}
@@ -175,31 +175,31 @@ const ImportData: React.FC = () => {
           className="btn-primary"
           style={{ height: '48px' }}
         >
-          {loading ? '⏳ Импорт...' : ' Импортировать'}
+          {loading ? 'Импорт...' : ' Импортировать'}
         </button>
       </form>
       
       {result && (
-        <div className="mt-6" style={{ background: '#f8fbfe', borderRadius: '20px', padding: '20px', border: '1px solid rgba(100, 150, 200, 0.2)' }}>
-          <h3 style={{ color: '#1c2e43', marginBottom: '16px', fontSize: '16px' }}>Результат импорта:</h3>
+        <div className="mt-6" style={{ background: '#f6f7f8', borderRadius: '12px', padding: '20px', border: '1px solid rgba(100, 150, 200, 0.2)' }}>
+          <h3 style={{ color: '#101418', marginBottom: '16px', fontSize: '16px' }}>Результат импорта:</h3>
           <div style={{ display: 'flex', gap: '32px', marginBottom: '16px' }}>
             <div>
-              <span style={{ color: '#8792a2', fontSize: '12px' }}>Всего строк</span>
-              <div style={{ fontSize: '24px', fontWeight: '600', color: '#1c2e43' }}>{result.totalRows}</div>
+              <span style={{ color: '#7a838d', fontSize: '12px' }}>Всего строк</span>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#101418' }}>{result.totalRows}</div>
             </div>
             <div>
-              <span style={{ color: '#8792a2', fontSize: '12px' }}>Успешно</span>
-              <div style={{ fontSize: '24px', fontWeight: '600', color: '#1d796c' }}>{result.successRows}</div>
+              <span style={{ color: '#7a838d', fontSize: '12px' }}>Успешно</span>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#1f7a5a' }}>{result.successRows}</div>
             </div>
             <div>
-              <span style={{ color: '#8792a2', fontSize: '12px' }}>Ошибок</span>
-              <div style={{ fontSize: '24px', fontWeight: '600', color: '#b66c62' }}>{result.errorRows}</div>
+              <span style={{ color: '#7a838d', fontSize: '12px' }}>Ошибок</span>
+              <div style={{ fontSize: '24px', fontWeight: '600', color: '#a4473d' }}>{result.errorRows}</div>
             </div>
           </div>
           {result.errors.length > 0 && (
             <div>
-              <p style={{ color: '#b66c62', fontSize: '13px', marginBottom: '8px' }}> Ошибки:</p>
-              <ul style={{ color: '#9c6259', fontSize: '12px', paddingLeft: '20px' }}>
+              <p style={{ color: '#a4473d', fontSize: '13px', marginBottom: '8px' }}> Ошибки:</p>
+              <ul style={{ color: '#a4473d', fontSize: '12px', paddingLeft: '20px' }}>
                 {result.errors.slice(0, 5).map((err, i) => (
                   <li key={i}>{err}</li>
                 ))}

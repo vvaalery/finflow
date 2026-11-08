@@ -12,3 +12,20 @@ CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(transaction_typ
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON audit_logs(created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id uuid PRIMARY KEY,
+    user_id uuid NOT NULL,
+    dedupe_key varchar(200) NOT NULL,
+    type varchar(40) NOT NULL,
+    severity varchar(20) NOT NULL,
+    title varchar(200) NOT NULL,
+    message text,
+    link_tab varchar(40),
+    is_read boolean NOT NULL DEFAULT false,
+    dismissed boolean NOT NULL DEFAULT false,
+    read_at timestamp,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_notifications_user_key UNIQUE (user_id, dedupe_key)
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON notifications(user_id, created_at);

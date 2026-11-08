@@ -92,7 +92,7 @@ const PaymentRequests: React.FC = () => {
   const uniqueCategories = Array.from(new Set(allRequests.map(r => r.category).filter(Boolean)));
 
   const inputStyle = {
-    width: '100%', padding: '12px 14px', border: '1px solid #d4e2ef', borderRadius: '14px',
+    width: '100%', padding: '12px 14px', border: '1px solid #d5d9de', borderRadius: '14px',
     fontSize: '14px', boxSizing: 'border-box' as const, height: '48px', background: 'white'
   };
 
@@ -104,7 +104,7 @@ const PaymentRequests: React.FC = () => {
         <h2 style={{ fontSize: '20px', fontWeight: '600' }}> Согласование платежей</h2>
       </div>
 
-      <div style={{ marginBottom: '20px', padding: '20px', background: '#f8fbfe', borderRadius: '16px', border: '1px solid #e2edf7' }}>
+      <div style={{ marginBottom: '20px', padding: '20px', background: '#f6f7f8', borderRadius: '16px', border: '1px solid #e7e9ec' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
           <div style={{ flex: 2, minWidth: '200px' }}>
             <input type="text" placeholder=" Поиск..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={inputStyle} />
@@ -152,7 +152,7 @@ const PaymentRequests: React.FC = () => {
                   return (
                     <tr key={req.id}>
                       <td>
-                        <span style={isOverdue ? { color: '#ff4d4f', fontWeight: '700' } : {}}>{reqDate.toLocaleDateString('ru-RU')}</span>
+                        <span style={isOverdue ? { color: '#a4473d', fontWeight: '700' } : {}}>{reqDate.toLocaleDateString('ru-RU')}</span>
                       </td>
                       <td><strong>{req.title}</strong></td>
                       <td className="amount-negative">{formatNumber(req.amount)}</td>
@@ -182,7 +182,7 @@ const PaymentRequests: React.FC = () => {
                             </button>
                           </div>
                         ) : (
-                          <span style={{ color: '#d4e2ef', fontSize: '12px' }}>Обработано</span>
+                          <span style={{ color: '#d5d9de', fontSize: '12px' }}>Обработано</span>
                         )}
                       </td>
                     </tr>

@@ -1,5 +1,3 @@
--- Идемпотентное восстановление демонстрационной компании и её счетов.
--- Запускать из корня проекта: docker compose exec -T postgres psql -U postgres -d finance_db < scripts/restore-company-data.sql
 BEGIN;
 
 INSERT INTO public.companies

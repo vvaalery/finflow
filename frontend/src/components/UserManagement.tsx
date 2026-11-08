@@ -35,7 +35,7 @@ const UserManagement: React.FC = () => {
   const inputStyle = {
     width: '100%',
     padding: '12px 14px',
-    border: '1px solid #d4e2ef',
+    border: '1px solid #d5d9de',
     borderRadius: '14px',
     fontSize: '14px',
     boxSizing: 'border-box' as const,
@@ -101,22 +101,22 @@ const UserManagement: React.FC = () => {
   const getRoleName = (roleName: string) => {
     switch (roleName.replace('ROLE_', '')) {
       case 'ADMIN':
-        return { name: 'Администратор', color: '#1d796c', bg: 'rgba(90, 155, 192, 0.1)' };
+        return { name: 'Администратор', color: '#1f7a5a', bg: 'rgba(90, 155, 192, 0.1)' };
       case 'FINANCE_MANAGER':
       case 'FINANCIAL_MANAGER':
-        return { name: 'Финансовый менеджер', color: '#1d796c', bg: 'rgba(29, 121, 108, 0.1)' };
+        return { name: 'Финансовый менеджер', color: '#1f7a5a', bg: 'rgba(29, 121, 108, 0.1)' };
       case 'MANAGER':
       case 'DIRECTOR':
         return { name: 'Руководитель', color: '#cc8b2c', bg: 'rgba(204, 139, 44, 0.1)' };
       default:
-        return { name: 'Просмотр', color: '#8792a2', bg: 'rgba(122, 154, 190, 0.1)' };
+        return { name: 'Просмотр', color: '#7a838d', bg: 'rgba(122, 154, 190, 0.1)' };
     }
   };
 
   if (!isAdmin) {
     return (
       <div className="card">
-        <div style={{ textAlign: 'center', padding: '40px', color: '#9c6259' }}>
+        <div style={{ textAlign: 'center', padding: '40px', color: '#a4473d' }}>
            Доступ запрещён. Только для администраторов.
         </div>
       </div>
@@ -130,7 +130,7 @@ const UserManagement: React.FC = () => {
         <button
           onClick={() => setShowForm(!showForm)}
           className="btn-primary"
-          style={{ padding: '8px 20px', height: '48px', background: showForm ? '#963f50' : 'linear-gradient(135deg, #7b2b46 0%, #5b1d33 100%)' }}
+          style={{ padding: '8px 20px', height: '48px', background: showForm ? '#a4473d' : 'linear-gradient(135deg, #1f7a5a 0%, #14513f 100%)' }}
         >
           {showForm ? ' Отмена' : '+ Добавить пользователя'}
         </button>
@@ -141,8 +141,8 @@ const UserManagement: React.FC = () => {
           padding: '12px 16px',
           borderRadius: '12px',
           marginBottom: '20px',
-          background: /создан|активирован/.test(message) ? '#e8f2e9' : '#fbebeb',
-          color: /создан|активирован/.test(message) ? '#386b4c' : '#963f50',
+          background: message.includes('') ? '#e9f3ee' : '#faf0ee',
+          color: message.includes('') ? '#1f7a5a' : '#a4473d',
           fontSize: '14px'
         }}>
           {message}
@@ -153,9 +153,9 @@ const UserManagement: React.FC = () => {
         <form onSubmit={createUser} style={{
           marginBottom: '28px',
           padding: '20px',
-          background: '#fbf5ef',
-          borderRadius: '18px',
-          border: '1px solid #e9ded3'
+          background: '#f6f7f8',
+          borderRadius: '12px',
+          border: '1px solid #e7e9ec'
         }}>
           <div className="form-grid">
             <div className="form-group">
@@ -243,7 +243,7 @@ const UserManagement: React.FC = () => {
                       <span style={{
                         display: 'inline-block',
                         padding: '4px 12px',
-                        borderRadius: '20px',
+                        borderRadius: '12px',
                         fontSize: '12px',
                         background: roleInfo.bg,
                         color: roleInfo.color
@@ -255,10 +255,10 @@ const UserManagement: React.FC = () => {
                       <span style={{
                         display: 'inline-block',
                         padding: '4px 12px',
-                        borderRadius: '20px',
+                        borderRadius: '12px',
                         fontSize: '12px',
-                        background: u.isActive ? '#e2f3e8' : '#fef0f0',
-                        color: u.isActive ? '#2c6e4e' : '#9c6259'
+                        background: u.isActive ? '#e9f3ee' : '#faf0ee',
+                        color: u.isActive ? '#1f7a5a' : '#a4473d'
                       }}>
                         {u.isActive ? 'Активен' : 'Заблокирован'}
                       </span>
@@ -268,9 +268,9 @@ const UserManagement: React.FC = () => {
                         onClick={() => toggleUserStatus(u.id, u.isActive)}
                         className="btn-secondary"
                         style={{ 
-                          background: u.isActive ? '#fef0f0' : '#e2f3e8',
-                          color: u.isActive ? '#9c6259' : '#2c6e4e',
-                          borderColor: u.isActive ? '#d8aaa2' : '#5cb085',
+                          background: u.isActive ? '#faf0ee' : '#e9f3ee',
+                          color: u.isActive ? '#a4473d' : '#1f7a5a',
+                          borderColor: u.isActive ? '#e6cdc9' : '#1f7a5a',
                           height: '36px',
                           padding: '0 16px'
                         }}

@@ -1,5 +1,7 @@
+
 package com.finance.graphqlapi.config;
 
+import graphql.language.StringValue;
 import graphql.schema.Coercing;
 import graphql.schema.CoercingParseLiteralException;
 import graphql.schema.CoercingParseValueException;
@@ -17,24 +19,90 @@ import java.util.UUID;
 public class GraphQLScalarConfig {
     @Bean
     RuntimeWiringConfigurer runtimeWiringConfigurer() {
-        GraphQLScalarType uuid = GraphQLScalarType.newScalar().name("UUID").description("UUID scalar")
+        GraphQLScalarType uuid = GraphQLScalarType.newScalar()
+                .name("UUID")
+                .description("UUID scalar")
                 .coercing(new Coercing<UUID, String>() {
-                    public String serialize(Object input) { try { return input instanceof UUID u ? u.toString() : UUID.fromString(input.toString().replace("\"", "")).toString(); } catch(Exception e){throw new CoercingSerializeException("Invalid UUID");} }
-                    public UUID parseValue(Object input) { try { return UUID.fromString(input.toString().replace("\"", "")); } catch(Exception e){throw new CoercingParseValueException("Invalid UUID");} }
-                    public UUID parseLiteral(Object input) { try { return UUID.fromString(input.toString().replace("\"", "")); } catch(Exception e){throw new CoercingParseLiteralException("Invalid UUID");} }
-                }).build();
-        GraphQLScalarType date = GraphQLScalarType.newScalar().name("LocalDate").description("ISO-8601 date")
+                    @Override
+                    public String serialize(Object input) {
+                        try {
+                            return UUID.fromString(input.toString()).toString();
+                        } catch (Exception e) {
+                            throw new CoercingSerializeException("Invalid UUID");
+                        }
+                    }
+
+                    @Override
+                    public UUID parseValue(Object input) {
+                        try {
+                            return UUID.fromString(input.toString());
+                        } catch (Exception e) {
+                            throw new CoercingParseValueException("Invalid UUID");
+                        }
+                    }
+
+                    @Override
+                    public UUID parseLiteral(Object input) {
+                        if (input instanceof StringValue value) {
+                            try {
+                                return UUID.fromString(value.getValue());
+                            } catch (Exception e) {
+                                throw new CoercingParseLiteralException("Invalid UUID");
+                            }
+                        }
+                        throw new CoercingParseLiteralException("Invalid UUID");
+                    }
+                })
+                .build();
+
+        GraphQLScalarType date = GraphQLScalarType.newScalar()
+                .name("LocalDate")
+                .description("ISO-8601 date")
                 .coercing(new Coercing<LocalDate, String>() {
-                    public String serialize(Object input){return input.toString();}
-                    public LocalDate parseValue(Object input){return LocalDate.parse(input.toString().replace("\"", ""));}
-                    public LocalDate parseLiteral(Object input){return LocalDate.parse(input.toString().replace("\"", ""));}
-                }).build();
-        GraphQLScalarType dateTime = GraphQLScalarType.newScalar().name("LocalDateTime").description("ISO-8601 date-time")
+                    @Override
+                    public String serialize(Object input) {
+                        return input.toString();
+                    }
+
+                    @Override
+                    public LocalDate parseValue(Object input) {
+                        return LocalDate.parse(input.toString());
+                    }
+
+                    @Override
+                    public LocalDate parseLiteral(Object input) {
+                        if (input instanceof StringValue value) {
+                            return LocalDate.parse(value.getValue());
+                        }
+                        throw new CoercingParseLiteralException("Invalid LocalDate");
+                    }
+                })
+                .build();
+
+        GraphQLScalarType dateTime = GraphQLScalarType.newScalar()
+                .name("LocalDateTime")
+                .description("ISO-8601 date-time")
                 .coercing(new Coercing<LocalDateTime, String>() {
-                    public String serialize(Object input){return input.toString();}
-                    public LocalDateTime parseValue(Object input){return LocalDateTime.parse(input.toString().replace("\"", ""));}
-                    public LocalDateTime parseLiteral(Object input){return LocalDateTime.parse(input.toString().replace("\"", ""));}
-                }).build();
+                    @Override
+                    public String serialize(Object input) {
+                        return input.toString();
+                    }
+
+                    @Override
+                    public LocalDateTime parseValue(Object input) {
+                        return LocalDateTime.parse(input.toString());
+                    }
+
+                    @Override
+                    public LocalDateTime parseLiteral(Object input) {
+                        if (input instanceof StringValue value) {
+                            return LocalDateTime.parse(value.getValue());
+                        }
+                        throw new CoercingParseLiteralException("Invalid LocalDateTime");
+                    }
+                })
+                .build();
+
         return wiring -> wiring.scalar(uuid).scalar(date).scalar(dateTime);
     }
 }

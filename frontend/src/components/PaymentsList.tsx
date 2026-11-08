@@ -163,7 +163,7 @@ const PaymentsList: React.FC = () => {
   };
 
   const inputStyle = {
-    width: '100%', padding: '12px 14px', border: '1px solid #d4e2ef', borderRadius: '14px',
+    width: '100%', padding: '12px 14px', border: '1px solid #d5d9de', borderRadius: '14px',
     fontSize: '14px', boxSizing: 'border-box' as const, height: '48px'
   };
 
@@ -172,12 +172,12 @@ const PaymentsList: React.FC = () => {
       <div className="flex-between" style={{ marginBottom: '20px' }}>
         <h2> Платежный календарь</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setViewMode('upcoming')} className="btn-secondary" style={viewMode === 'upcoming' ? { background: '#17665e', color: 'white' } : {}}> Предстоящие </button>
-          <button onClick={() => setViewMode('all')} className="btn-secondary" style={viewMode === 'all' ? { background: '#17665e', color: 'white' } : {}}> Все платежи </button>
+          <button onClick={() => setViewMode('upcoming')} className="btn-secondary" style={viewMode === 'upcoming' ? { background: '#14513f', color: 'white' } : {}}> Предстоящие </button>
+          <button onClick={() => setViewMode('all')} className="btn-secondary" style={viewMode === 'all' ? { background: '#14513f', color: 'white' } : {}}> Все платежи </button>
         </div>
       </div>
 
-      <div style={{ marginBottom: '20px', padding: '20px', background: '#f8fbfe', borderRadius: '16px', border: '1px solid #e2edf7' }}>
+      <div style={{ marginBottom: '20px', padding: '20px', background: '#f6f7f8', borderRadius: '16px', border: '1px solid #e7e9ec' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
           <input type="text" placeholder=" Поиск..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ ...inputStyle, flex: 3 }} />
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
@@ -206,7 +206,7 @@ const PaymentsList: React.FC = () => {
       )}
 
       {showForm && (
-        <form onSubmit={createPayment} style={{ marginBottom: '24px', padding: '20px', background: 'rgba(90, 155, 192, 0.05)', borderRadius: '20px', border: '1px solid rgba(100, 150, 200, 0.2)' }}>
+        <form onSubmit={createPayment} style={{ marginBottom: '24px', padding: '20px', background: 'rgba(90, 155, 192, 0.05)', borderRadius: '12px', border: '1px solid rgba(100, 150, 200, 0.2)' }}>
           <div className="form-grid">
             <div className="form-group">
               <label>Название платежа</label>
@@ -251,7 +251,6 @@ const PaymentsList: React.FC = () => {
                 <th>Категория</th>
                 <th>Контрагент</th>
                 <th>Статус</th>
-                <th>Действия</th>
               </tr>
             </thead>
             <tbody>

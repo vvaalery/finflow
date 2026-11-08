@@ -5,7 +5,7 @@ import apiClient from '../api/client';
 const Profile: React.FC = () => {
   const { user } = useAuthStore();
   const [fullName, setFullName] = useState(user?.fullName || '');
-  const [email] = useState(user?.email || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -15,10 +15,9 @@ const Profile: React.FC = () => {
     setMessage('');
     
     try {
-      const response = await apiClient.put('/users/profile', { fullName });
+      await apiClient.put('/users/profile', { fullName, email });
       
-      // Обновляем данные в store
-      const updatedUser = { ...user, fullName: response.data.fullName }; 
+      const updatedUser = { ...user, fullName, email };
       localStorage.setItem('auth-storage', JSON.stringify({ state: { user: updatedUser } }));
       
       setMessage(' Профиль успешно обновлён');
@@ -36,9 +35,9 @@ const Profile: React.FC = () => {
       
       {message && (
         <div className="message" style={{ 
-          background: message.includes('успешно') ? '#e2f3e8' : '#fef0f0', 
-          color: message.includes('успешно') ? '#2c6e4e' : '#9c6259',
-          borderLeft: `3px solid ${message.includes('успешно') ? '#5cb085' : '#d8aaa2'}`,
+          background: message.includes('успешно') ? '#e9f3ee' : '#faf0ee', 
+          color: message.includes('успешно') ? '#1f7a5a' : '#a4473d',
+          borderLeft: `3px solid ${message.includes('успешно') ? '#1f7a5a' : '#e6cdc9'}`,
           marginBottom: '20px'
         }}>
           {message}
@@ -52,8 +51,7 @@ const Profile: React.FC = () => {
             <input
               type="email"
               value={email}
-              readOnly
-              aria-label="Email пользователя (только чтение)"
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="email@example.com"
               required
             />
@@ -76,7 +74,7 @@ const Profile: React.FC = () => {
               type="text"
               value={user?.role?.replace('ROLE_', '') || ''}
               disabled
-              style={{ background: '#f5f7fa', color: '#8792a2' }}
+              style={{ background: '#f6f7f8', color: '#7a838d' }}
             />
           </div>
         </div>

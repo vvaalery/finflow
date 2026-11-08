@@ -21,7 +21,7 @@ const Reports: React.FC = () => {
   const inputStyle = {
     width: '100%',
     padding: '12px 14px',
-    border: '1px solid #d4e2ef',
+    border: '1px solid #d5d9de',
     borderRadius: '14px',
     fontSize: '14px',
     boxSizing: 'border-box' as const,
@@ -120,8 +120,8 @@ const Reports: React.FC = () => {
           padding: '12px 16px', 
           borderRadius: '12px', 
           marginBottom: '20px', 
-          background: message.includes('успешно') ? '#e2f3e8' : '#fef0f0', 
-          color: message.includes('успешно') ? '#2c6e4e' : '#9c6259',
+          background: message.includes('успешно') ? '#e9f3ee' : '#faf0ee', 
+          color: message.includes('успешно') ? '#1f7a5a' : '#a4473d',
           fontSize: '14px'
         }}>
           {message}
@@ -132,21 +132,21 @@ const Reports: React.FC = () => {
         <button
           onClick={() => setExportType('transactions')}
           className={exportType === 'transactions' ? 'btn-primary' : 'btn-secondary'}
-          style={exportType === 'transactions' ? { background: 'linear-gradient(135deg, #1d796c 0%, #17665e 100%)', height: '44px' } : { height: '44px' }}
+          style={exportType === 'transactions' ? { background: 'linear-gradient(135deg, #1f7a5a 0%, #14513f 100%)', height: '44px' } : { height: '44px' }}
         >
            Транзакции
         </button>
         <button
           onClick={() => setExportType('payments')}
           className={exportType === 'payments' ? 'btn-primary' : 'btn-secondary'}
-          style={exportType === 'payments' ? { background: 'linear-gradient(135deg, #1d796c 0%, #17665e 100%)', height: '44px' } : { height: '44px' }}
+          style={exportType === 'payments' ? { background: 'linear-gradient(135deg, #1f7a5a 0%, #14513f 100%)', height: '44px' } : { height: '44px' }}
         >
            Платежи
         </button>
         <button
           onClick={() => setExportType('forecast')}
           className={exportType === 'forecast' ? 'btn-primary' : 'btn-secondary'}
-          style={exportType === 'forecast' ? { background: 'linear-gradient(135deg, #1d796c 0%, #17665e 100%)', height: '44px' } : { height: '44px' }}
+          style={exportType === 'forecast' ? { background: 'linear-gradient(135deg, #1f7a5a 0%, #14513f 100%)', height: '44px' } : { height: '44px' }}
         >
            Прогноз
         </button>
@@ -183,7 +183,7 @@ const Reports: React.FC = () => {
                       flex: 1,
                       padding: '12px 0',
                       height: '48px',
-                      background: forecastMonths === months ? 'linear-gradient(135deg, #1d796c 0%, #17665e 100%)' : undefined
+                      background: forecastMonths === months ? 'linear-gradient(135deg, #1f7a5a 0%, #14513f 100%)' : undefined
                     }}
                   >
                     {months} мес
@@ -216,7 +216,7 @@ const Reports: React.FC = () => {
         disabled={loading}
         style={{ minWidth: '220px', height: '48px', fontSize: '15px' }}
       >
-        {loading ? '⏳ Формирование...' : ' Экспортировать в Excel'}
+        {loading ? 'Формирование...' : ' Экспортировать в Excel'}
       </button>
     </div>
   );

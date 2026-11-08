@@ -17,7 +17,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER')")
+@PreAuthorize("hasAnyRole('ADMIN','FINANCIAL_MANAGER','DIRECTOR')")
 @RestController
 @RequestMapping("/api/payment-requests")
 @RequiredArgsConstructor
@@ -70,7 +70,8 @@ public class PaymentRequestController {
     }
 
     @PatchMapping("/{id}/status")
-@Transactional
+    @PreAuthorize("hasAnyRole('ADMIN','DIRECTOR')")
+    @Transactional
 public PaymentRequest updateStatus(@PathVariable UUID id, @RequestParam String status) {
     try {
         PaymentCalendar calItem = calendarRepository.findById(id).orElse(null);

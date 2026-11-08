@@ -27,7 +27,7 @@ public class DataInitializer {
             Role manager = roles.findByName("FINANCIAL_MANAGER").orElseGet(() -> {
                 Role role = new Role(); role.setName("FINANCIAL_MANAGER"); return roles.save(role);
             });
-            roles.findByName("DIRECTOR").orElseGet(() -> {
+            Role director = roles.findByName("DIRECTOR").orElseGet(() -> {
                 Role role = new Role(); role.setName("DIRECTOR"); return roles.save(role);
             });
             Role admin = roles.findByName("ADMIN").orElseGet(() -> {
@@ -44,7 +44,22 @@ public class DataInitializer {
                 return users.save(user);
             });
 
-            // Restore a usable company profile and accounts only when they are missing.
+            User financeManager = users.findByEmail("manager@finflow.local").orElseGet(User::new);
+            financeManager.setEmail("manager@finflow.local");
+            financeManager.setFullName("Финансовый менеджер");
+            financeManager.setPasswordHash(encoder.encode("Manager123!"));
+            financeManager.setRole(manager);
+            financeManager.setIsActive(true);
+            users.save(financeManager);
+
+            User directorUser = users.findByEmail("director@finflow.local").orElseGet(User::new);
+            directorUser.setEmail("director@finflow.local");
+            directorUser.setFullName("Директор компании");
+            directorUser.setPasswordHash(encoder.encode("Director123!"));
+            directorUser.setRole(director);
+            directorUser.setIsActive(true);
+            users.save(directorUser);
+
             Company company = companies.findByOwner(administrator).stream()
                     .filter(item -> "Creative Pulse Design Studio".equalsIgnoreCase(item.getName()))
                     .findFirst()
@@ -52,7 +67,6 @@ public class DataInitializer {
                             .filter(item -> "Creative Pulse Design Studio".equalsIgnoreCase(item.getName()))
                             .findFirst()
                             .map(existing -> {
-                                // Reattach the legacy demo company to the seeded admin account.
                                 existing.setOwner(administrator);
                                 return companies.save(existing);
                             })

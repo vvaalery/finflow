@@ -1,512 +1,120 @@
-import React, { useEffect, useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import apiClient from '../api/client';
+import { Icon } from './Icons';
+import { timeAgo, useNotificationStore } from '../store/notificationStore';
 
-interface Stats {
-  totalUsers: number;
-  totalCompanies: number;
-  totalTransactions: number;
-  totalPayments: number;
-  monthlyIncome: number;
-  monthlyExpense: number;
-}
+interface Stats { totalUsers: number; totalCompanies: number; totalTransactions: number; totalPayments: number; monthlyIncome: number; monthlyExpense: number }
+interface MonthlyData { month: string; income: number; expense: number }
+interface CategoryData { name: string; value: number }
 
-interface MonthlyData {
-  month: string;
-  income: number;
-  expense: number;
-}
+const nf = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 });
+const compact = (v: number) => new Intl.NumberFormat('ru-RU', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
 
-interface CategoryData {
-  name: string;
-  value: number;
-}
-
-const COLORS = [
-  '#1d796c',
-  '#7ab3cc',
-  '#b66c62',
-  '#e0b66d',
-  '#8b91c7',
-  '#b8c2cc',
-];
-
-const DashboardAnalytics: React.FC = () => {
-  const [stats, setStats] = useState<Stats>({
-    totalUsers: 0,
-    totalCompanies: 0,
-    totalTransactions: 0,
-    totalPayments: 0,
-    monthlyIncome: 0,
-    monthlyExpense: 0,
-  });
-
+const DashboardAnalytics: React.FC<{ onOpenTab?: (tab: string) => void }> = ({ onOpenTab }) => {
+  const [stats, setStats] = useState<Stats>({ totalUsers: 0, totalCompanies: 0, totalTransactions: 0, totalPayments: 0, monthlyIncome: 0, monthlyExpense: 0 });
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const { items, markRead } = useNotificationStore();
 
-  useEffect(() => {
-    fetchAllAnalytics();
-  }, []);
-
-  const fetchAllAnalytics = async () => {
-    setLoading(true);
-
+  const load = async () => {
+    setLoading(true); setFailed(false);
     try {
-      const [statsRes, monthlyRes, categoryRes] = await Promise.all([
-        apiClient.get('/analytics/stats'),
-        apiClient.get('/analytics/monthly-dynamics'),
-        apiClient.get('/analytics/category-distribution'),
+      const [s, m, c] = await Promise.all([
+        apiClient.get('/analytics/stats'), apiClient.get('/analytics/monthly-dynamics'), apiClient.get('/analytics/category-distribution'),
       ]);
-
-      setStats(statsRes.data);
-      setMonthlyData(monthlyRes.data);
-      setCategoryData(categoryRes.data);
-    } catch (error) {
-      console.error('Ошибка при загрузке аналитики:', error);
-    } finally {
-      setLoading(false);
-    }
+      setStats(s.data); setMonthlyData(m.data); setCategoryData(c.data);
+    } catch { setFailed(true); } finally { setLoading(false); }
   };
+  useEffect(() => { load(); }, []);
 
-  const formatNumber = (num: number) =>
-    (num || 0).toLocaleString('ru-RU', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
+  const categories = useMemo(() => {
+    const total = categoryData.reduce((sum, c) => sum + Number(c.value || 0), 0);
+    return [...categoryData].sort((a, b) => b.value - a.value).slice(0, 6)
+      .map(c => ({ ...c, share: total > 0 ? (c.value / total) * 100 : 0 }));
+  }, [categoryData]);
 
-  // Объединяем похожие категории в крупные направления.
-  const normalizeCategory = (name: string): string => {
-    const value = (name || '').trim().toLowerCase();
+  const attention = items.filter(n => !n.read && n.severity !== 'INFO').slice(0, 3);
+  const net = stats.monthlyIncome - stats.monthlyExpense;
 
-    if (
-      /зарплат|заработн|персонал|сотрудник|обучени|тренинг|оклад|преми/.test(
-        value
-      )
-    ) {
-      return 'Зарплата и персонал';
-    }
-
-    if (
-      /разработ|программ|лицензи|подписк|saas|домен|хостинг|\bit\b|software|облачн/.test(
-        value
-      )
-    ) {
-      return 'Разработка и IT';
-    }
-
-    if (
-      /аренд|офис|сервер|оборудован|ремонт|инфраструктур|компьютер|мебел|коммунал/.test(
-        value
-      )
-    ) {
-      return 'Офис и инфраструктура';
-    }
-
-    if (/налог|банк|комисси|банковск|пошлин/.test(value)) {
-      return 'Налоги и банковские услуги';
-    }
-
-    if (
-      /маркетинг|реклам|командиров|такси|билет|гостиниц|клиентск|встреч|продвижен|транспорт|логистик/.test(
-        value
-      )
-    ) {
-      return 'Маркетинг и командировки';
-    }
-
-    return 'Прочее';
-  };
-
-  // Суммируем значения внутри каждой группы.
-  const groupedCategoryData = Object.values(
-    categoryData.reduce<Record<string, CategoryData>>((groups, item) => {
-      const name = normalizeCategory(item.name);
-      const value = Number(item.value) || 0;
-
-      if (!groups[name]) {
-        groups[name] = { name, value: 0 };
-      }
-
-      groups[name].value += value;
-      return groups;
-    }, {})
-  )
-    .filter((item) => item.value > 0)
-    .sort((a, b) => b.value - a.value);
-
-  // Оставляем пять основных направлений.
-  // Все остальные группы объединяем в «Прочее».
-  const mainCategories = groupedCategoryData
-    .filter((item) => item.name !== 'Прочее')
-    .slice(0, 5);
-
-  const otherValue = groupedCategoryData
-    .filter(
-      (item) =>
-        item.name === 'Прочее' ||
-        !mainCategories.some((main) => main.name === item.name)
-    )
-    .reduce((sum, item) => sum + item.value, 0);
-
-  const chartData: CategoryData[] = [
-    ...mainCategories,
-    ...(otherValue > 0
-      ? [{ name: 'Прочее', value: otherValue }]
-      : []),
-  ].sort((a, b) => b.value - a.value);
-
-  const totalCategoryValue = chartData.reduce(
-    (sum, item) => sum + item.value,
-    0
-  );
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (!active || !payload || payload.length === 0) {
-      return null;
-    }
-
-    return (
-      <div
-        style={{
-          background: '#ffffff',
-          padding: '10px 14px',
-          borderRadius: '12px',
-          border: '1px solid #e2edf7',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-        }}
-      >
-        {label && (
-          <div
-            style={{
-              fontWeight: 600,
-              marginBottom: '5px',
-              color: '#1c2e43',
-            }}
-          >
-            {label}
-          </div>
-        )}
-
-        {payload.map((p: any, idx: number) => (
-          <div
-            key={idx}
-            style={{
-              color: p.color || p.payload?.fill || '#1c2e43',
-              fontSize: '13px',
-              margin: '3px 0',
-            }}
-          >
-            {p.name || p.payload?.name}:{' '}
-            <strong>{formatNumber(Number(p.value) || 0)} BYN</strong>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div
-        className="loading"
-        style={{ padding: '50px', textAlign: 'center' }}
-      >
-        ⏳ Считаем ваши деньги...
-      </div>
-    );
-  }
+  if (loading) return <div className="loading">Загрузка данных…</div>;
 
   return (
-    <div className="analytics-container">
-      
-      <div
-        className="stats-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '20px',
-          marginBottom: '28px',
-        }}
-      >
-        <div className="stat-card">
-          <div className="stat-value">{stats.totalTransactions}</div>
-          <div className="stat-label">Всего транзакций</div>
+    <div className="stack">
+      <section className="page-heading">
+        <div>
+          <h1>Обзор</h1>
+          <p>Денежные потоки за текущий месяц и динамика последних шести месяцев.</p>
         </div>
+        <button className="btn-secondary" onClick={load}><Icon name="refresh" size={15} />Обновить</button>
+      </section>
 
-        <div className="stat-card">
-          <div className="stat-value">{stats.totalPayments}</div>
-          <div className="stat-label">Ожидаемых платежей</div>
-        </div>
+      {failed && <div className="inline-error" role="alert" style={{ marginTop: 0 }}>Не удалось загрузить аналитику. Проверьте подключение к серверу.</div>}
 
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#1d796c' }}>
-            {formatNumber(stats.monthlyIncome)} BYN
-          </div>
-          <div className="stat-label">Доходы за месяц</div>
-        </div>
+      <section className="stats-grid" style={{ marginBottom: 0 }}>
+        <div className="stat-card"><div className="stat-value" style={{ color: net >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{nf.format(net)} <small style={{ fontSize: 13, fontFamily: 'var(--sans)', color: 'var(--muted)' }}>BYN</small></div><div className="stat-label">Чистый поток за месяц</div></div>
+        <div className="stat-card"><div className="stat-value">{nf.format(stats.monthlyIncome)}</div><div className="stat-label">Доходы за месяц, BYN</div></div>
+        <div className="stat-card"><div className="stat-value">{nf.format(stats.monthlyExpense)}</div><div className="stat-label">Расходы за месяц, BYN</div></div>
+        <div className="stat-card"><div className="stat-value">{stats.totalTransactions}</div><div className="stat-label">Операций в системе</div></div>
+        <div className="stat-card"><div className="stat-value">{stats.totalPayments}</div><div className="stat-label">Платежей в календаре</div></div>
+      </section>
 
-        <div className="stat-card">
-          <div className="stat-value" style={{ color: '#b66c62' }}>
-            {formatNumber(stats.monthlyExpense)} BYN
-          </div>
-          <div className="stat-label">Расходы за месяц</div>
-        </div>
+      {attention.length > 0 && (
+        <section className="panel note-panel" aria-label="Требует внимания">
+          <div style={{ padding: '18px 20px 6px' }}><h2 style={{ fontSize: 15, fontWeight: 600 }}>Требует внимания</h2></div>
+          {attention.map(n => (
+            <div key={n.id} className={`note compact ${n.severity}`} style={{ cursor: 'default' }}>
+              <div className="rule" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start' }}>
+                <div>
+                  <div className="note-title">{n.title}</div>
+                  <div className="note-text">{n.message}</div>
+                  <div className="note-meta">{timeAgo(n.createdAt)}</div>
+                </div>
+                {n.linkTab && onOpenTab && <button className="btn-ghost" onClick={() => { markRead(n.id); onOpenTab(n.linkTab!); }}>Перейти<Icon name="arrow" size={14} /></button>}
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
-        <div
-          className="stat-card"
-          style={{
-            background: 'linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%)',
-          }}
-        >
-          <div
-            className="stat-value"
-            style={{
-              color:
-                stats.monthlyIncome - stats.monthlyExpense >= 0
-                  ? '#1d796c'
-                  : '#b66c62',
-            }}
-          >
-            {formatNumber(stats.monthlyIncome - stats.monthlyExpense)} BYN
-          </div>
-          <div className="stat-label">Текущий остаток</div>
-        </div>
-      </div>
-
-      
-      <div className="card" style={{ marginBottom: '28px' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '20px',
-          }}
-        >
-          <h2>Динамика денежных потоков</h2>
-
-          <button
-            onClick={fetchAllAnalytics}
-            className="btn-secondary"
-            style={{ fontSize: '12px' }}
-          >
-            Обновить
-          </button>
-        </div>
-
-        <div style={{ height: '350px', width: '100%' }}>
+      <div className="grid-main">
+        <section className="panel">
+          <div className="panel-head"><div><h2>Динамика денежных потоков</h2><p>Доходы и расходы по месяцам, BYN</p></div></div>
           {monthlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={monthlyData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#e2edf7"
-                  vertical={false}
-                />
+            <>
+              <div className="chart-box">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <CartesianGrid stroke="#e7e9ec" vertical={false} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fill: '#7a838d', fontSize: 12 }} />
+                    <YAxis tickLine={false} axisLine={false} width={56} tick={{ fill: '#7a838d', fontSize: 12 }} tickFormatter={compact} />
+                    <Tooltip formatter={(v) => `${nf.format(Number(v))} BYN`} contentStyle={{ borderRadius: 10, border: '1px solid #e7e9ec', boxShadow: '0 8px 24px rgba(16,20,24,.1)', fontSize: 13 }} />
+                    <Line type="monotone" dataKey="income" name="Доходы" stroke="#14513f" strokeWidth={2.25} dot={{ r: 3, fill: '#14513f', strokeWidth: 0 }} />
+                    <Line type="monotone" dataKey="expense" name="Расходы" stroke="#a4473d" strokeWidth={2.25} dot={{ r: 3, fill: '#a4473d', strokeWidth: 0 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="legend"><span><i style={{ borderColor: '#14513f' }} />Доходы</span><span><i style={{ borderColor: '#a4473d' }} />Расходы</span></div>
+            </>
+          ) : <div className="empty"><p>Нет данных для графика. Добавьте операции или импортируйте историю.</p></div>}
+        </section>
 
-                <XAxis
-                  dataKey="month"
-                  tick={{ fill: '#8792a2', fontSize: 12 }}
-                  axisLine={false}
-                />
-
-                <YAxis
-                  tick={{ fill: '#8792a2', fontSize: 12 }}
-                  axisLine={false}
-                />
-
-                <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" />
-
-                <Line
-                  type="monotone"
-                  dataKey="income"
-                  stroke="#1d796c"
-                  strokeWidth={3}
-                  name="Доходы"
-                  dot={{ r: 4, fill: '#1d796c' }}
-                  activeDot={{ r: 6 }}
-                />
-
-                <Line
-                  type="monotone"
-                  dataKey="expense"
-                  stroke="#b66c62"
-                  strokeWidth={3}
-                  name="Расходы"
-                  dot={{ r: 4, fill: '#b66c62' }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div
-              style={{
-                textAlign: 'center',
-                color: '#8792a2',
-                paddingTop: '100px',
-              }}
-            >
-              Нет данных для отображения графика
+        <section className="panel">
+          <div className="panel-head"><div><h2>Структура по статьям</h2><p>Доля в общем обороте</p></div></div>
+          {categories.length === 0 ? <p className="muted">Добавьте операции с категориями, чтобы увидеть структуру.</p> : (
+            <div className="bars">
+              {categories.map(c => (
+                <div className="bar-row" key={c.name}>
+                  <span>{c.name}</span><span className="num">{Math.round(c.share)}%</span>
+                  <div className="track"><i style={{ width: `${Math.max(2, c.share)}%` }} /></div>
+                </div>
+              ))}
             </div>
           )}
-        </div>
-      </div>
-
-      
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))',
-          gap: '28px',
-        }}
-      >
-        
-        <div className="card">
-          <h2>Распределение по статьям</h2>
-
-          <div style={{ height: '320px', width: '100%' }}>
-            {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={chartData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={55}
-                    outerRadius={95}
-                    paddingAngle={3}
-                    dataKey="value"
-                    nameKey="name"
-                    labelLine={false}
-                    label={({ percent }) =>
-                      `${((percent || 0) * 100).toFixed(0)}%`
-                    }
-                  >
-                    {chartData.map((item, index) => (
-                      <Cell
-                        key={item.name}
-                        fill={COLORS[index % COLORS.length]}
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </Pie>
-
-                  <Tooltip content={<CustomTooltip />} />
-
-                  <Legend
-                    verticalAlign="bottom"
-                    align="center"
-                    iconType="circle"
-                    formatter={(value: string, entry: any) => {
-                      const item = entry.payload as CategoryData;
-                      const percent =
-                        totalCategoryValue > 0
-                          ? (item.value / totalCategoryValue) * 100
-                          : 0;
-
-                      return (
-                        <span
-                          style={{
-                            color: '#435166',
-                            fontSize: '12px',
-                          }}
-                        >
-                          {value} — {percent.toFixed(1)}%
-                        </span>
-                      );
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div
-                style={{
-                  textAlign: 'center',
-                  color: '#8792a2',
-                  paddingTop: '80px',
-                }}
-              >
-                Добавьте транзакции, чтобы увидеть структуру
-              </div>
-            )}
-          </div>
-        </div>
-
-        
-        <div className="card">
-          <h2>Сравнение периодов</h2>
-
-          <div style={{ height: '320px', width: '100%' }}>
-            {monthlyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData.slice(-4)}>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e2edf7"
-                    vertical={false}
-                  />
-
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fill: '#8792a2' }}
-                    axisLine={false}
-                  />
-
-                  <YAxis
-                    tick={{ fill: '#8792a2' }}
-                    axisLine={false}
-                  />
-
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend />
-
-                  <Bar
-                    dataKey="income"
-                    fill="#1d796c"
-                    name="Доходы"
-                    radius={[6, 6, 0, 0]}
-                    barSize={30}
-                  />
-
-                  <Bar
-                    dataKey="expense"
-                    fill="#b66c62"
-                    name="Расходы"
-                    radius={[6, 6, 0, 0]}
-                    barSize={30}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div
-                style={{
-                  textAlign: 'center',
-                  color: '#8792a2',
-                  paddingTop: '80px',
-                }}
-              >
-                Нет данных для сравнения
-              </div>
-            )}
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   );
