@@ -25,7 +25,7 @@ const PaymentRequests: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
 
   const normalizedRole = (user?.role || '').replace('ROLE_', '').replace('FINANCIAL_MANAGER', 'FINANCE_MANAGER');
-  const isDirector = normalizedRole === 'ADMIN' || normalizedRole === 'FINANCE_MANAGER';
+  const isDirector = normalizedRole === 'ADMIN' || normalizedRole === 'DIRECTOR';
 
   useEffect(() => {
     if (isDirector) loadRequests();

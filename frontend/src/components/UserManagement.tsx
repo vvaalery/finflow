@@ -73,15 +73,16 @@ const UserManagement: React.FC = () => {
   const createUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
+
     try {
       await apiClient.post('/admin/users', formData);
       setShowForm(false);
       setFormData({ email: '', password: '', fullName: '', roleId: 3 });
       loadUsers();
-      setMessage(' Пользователь создан');
+      setMessage('Пользователь создан');
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
-      setMessage(' Ошибка создания');
+      setMessage('Ошибка создания');
       setTimeout(() => setMessage(''), 3000);
     }
   };
@@ -90,10 +91,10 @@ const UserManagement: React.FC = () => {
     try {
       await apiClient.patch(`/admin/users/${id}/status`, { isActive: !currentStatus });
       loadUsers();
-      setMessage(` Пользователь ${!currentStatus ? 'активирован' : 'заблокирован'}`);
+      setMessage(`Пользователь ${!currentStatus ? 'активирован' : 'заблокирован'}`);
       setTimeout(() => setMessage(''), 3000);
     } catch (error) {
-      setMessage(' Ошибка изменения статуса');
+      setMessage('Ошибка изменения статуса');
       setTimeout(() => setMessage(''), 3000);
     }
   };
@@ -101,10 +102,10 @@ const UserManagement: React.FC = () => {
   const getRoleName = (roleName: string) => {
     switch (roleName.replace('ROLE_', '')) {
       case 'ADMIN':
-        return { name: 'Администратор', color: '#1f7a5a', bg: 'rgba(90, 155, 192, 0.1)' };
+        return { name: 'Администратор', color: '#7b243c', bg: 'rgba(123, 36, 60, 0.1)' };
       case 'FINANCE_MANAGER':
       case 'FINANCIAL_MANAGER':
-        return { name: 'Финансовый менеджер', color: '#1f7a5a', bg: 'rgba(29, 121, 108, 0.1)' };
+        return { name: 'Финансовый менеджер', color: '#7b243c', bg: 'rgba(123, 36, 60, 0.1)' };
       case 'MANAGER':
       case 'DIRECTOR':
         return { name: 'Руководитель', color: '#cc8b2c', bg: 'rgba(204, 139, 44, 0.1)' };
@@ -117,7 +118,7 @@ const UserManagement: React.FC = () => {
     return (
       <div className="card">
         <div style={{ textAlign: 'center', padding: '40px', color: '#a4473d' }}>
-           Доступ запрещён. Только для администраторов.
+          Доступ запрещён. Только для администраторов.
         </div>
       </div>
     );
@@ -126,13 +127,18 @@ const UserManagement: React.FC = () => {
   return (
     <div className="card">
       <div className="flex-between" style={{ marginBottom: '24px' }}>
-        <h2> Управление пользователями</h2>
+        <h2>Управление пользователями</h2>
         <button
           onClick={() => setShowForm(!showForm)}
           className="btn-primary"
-          style={{ padding: '8px 20px', height: '48px', background: showForm ? '#a4473d' : 'linear-gradient(135deg, #1f7a5a 0%, #14513f 100%)' }}
+          style={{
+            padding: '8px 20px',
+            height: '48px',
+            background: showForm ? '#a4473d' : 'linear-gradient(135deg, #7b243c 0%, #55172b 100%)',
+            borderColor: showForm ? '#a4473d' : '#7b243c'
+          }}
         >
-          {showForm ? ' Отмена' : '+ Добавить пользователя'}
+          {showForm ? 'Отмена' : '+ Добавить пользователя'}
         </button>
       </div>
 
@@ -141,8 +147,8 @@ const UserManagement: React.FC = () => {
           padding: '12px 16px',
           borderRadius: '12px',
           marginBottom: '20px',
-          background: message.includes('') ? '#e9f3ee' : '#faf0ee',
-          color: message.includes('') ? '#1f7a5a' : '#a4473d',
+          background: message.includes('Ошибка') ? '#faf0ee' : '#e9f3ee',
+          color: message.includes('Ошибка') ? '#a4473d' : '#1f7a5a',
           fontSize: '14px'
         }}>
           {message}
@@ -210,8 +216,12 @@ const UserManagement: React.FC = () => {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-            <button type="submit" className="btn-primary" style={{ height: '48px' }}>Создать пользователя</button>
-            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary" style={{ height: '48px' }}>Отмена</button>
+            <button type="submit" className="btn-primary" style={{ height: '48px' }}>
+              Создать пользователя
+            </button>
+            <button type="button" onClick={() => setShowForm(false)} className="btn-secondary" style={{ height: '48px' }}>
+              Отмена
+            </button>
           </div>
         </form>
       )}
@@ -219,7 +229,9 @@ const UserManagement: React.FC = () => {
       {loading ? (
         <div className="loading">Загрузка...</div>
       ) : users.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#8aaec9' }}> Нет пользователей</div>
+        <div style={{ textAlign: 'center', padding: '40px', color: '#8aaec9' }}>
+          Нет пользователей
+        </div>
       ) : (
         <div className="table-wrapper">
           <table>
@@ -267,7 +279,7 @@ const UserManagement: React.FC = () => {
                       <button
                         onClick={() => toggleUserStatus(u.id, u.isActive)}
                         className="btn-secondary"
-                        style={{ 
+                        style={{
                           background: u.isActive ? '#faf0ee' : '#e9f3ee',
                           color: u.isActive ? '#a4473d' : '#1f7a5a',
                           borderColor: u.isActive ? '#e6cdc9' : '#1f7a5a',

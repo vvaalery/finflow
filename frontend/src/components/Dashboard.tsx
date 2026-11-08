@@ -18,15 +18,15 @@ import Forecast from './Forecast';
 import DashboardAnalytics from './DashboardAnalytics';
 import ImportData from './ImportData';
 
-type TabId = 'dashboard' | 'notifications' | 'companies' | 'accounts' | 'transactions' | 'payments' | 'forecast' | 'import' | 'profile' | 'users' | 'references' | 'requests' | 'approvals' | 'reports';
+type TabId = 'dashboard' | 'notifications' | 'companies' | 'accounts' | 'transactions' | 'payments' | 'forecast' | 'import' | 'profile' | 'users' | 'references' | 'approvals' | 'reports';
 interface Tab { id: TabId; name: string; section: string; roles: string[]; icon: IconName }
 
 const ALL = ['ADMIN', 'FINANCE_MANAGER', 'DIRECTOR'];
 const MANAGERS = ['ADMIN', 'FINANCE_MANAGER'];
 
 const tabs: Tab[] = [
-  { id: 'dashboard', name: 'Обзор', section: 'Главное', roles: ALL, icon: 'overview' },
-  { id: 'notifications', name: 'Уведомления', section: 'Главное', roles: ALL, icon: 'bell' },
+  { id: 'dashboard', name: 'Обзор', section: 'Главная', roles: ALL, icon: 'overview' },
+  { id: 'notifications', name: 'Уведомления', section: 'Главная', roles: ALL, icon: 'bell' },
   { id: 'companies', name: 'Компания', section: 'Учёт', roles: MANAGERS, icon: 'company' },
   { id: 'accounts', name: 'Счета', section: 'Учёт', roles: MANAGERS, icon: 'accounts' },
   { id: 'transactions', name: 'Операции', section: 'Учёт', roles: MANAGERS, icon: 'transactions' },
@@ -35,12 +35,11 @@ const tabs: Tab[] = [
   { id: 'reports', name: 'Отчёты', section: 'Аналитика', roles: ALL, icon: 'reports' },
   { id: 'import', name: 'Импорт данных', section: 'Управление', roles: MANAGERS, icon: 'import' },
   { id: 'references', name: 'Справочники', section: 'Управление', roles: MANAGERS, icon: 'references' },
-  { id: 'requests', name: 'Заявки', section: 'Управление', roles: MANAGERS, icon: 'requests' },
   { id: 'approvals', name: 'Одобрение платежей', section: 'Управление', roles: ['ADMIN', 'DIRECTOR'], icon: 'requests' },
   { id: 'users', name: 'Пользователи', section: 'Администрирование', roles: ['ADMIN'], icon: 'users' },
   { id: 'profile', name: 'Профиль', section: 'Администрирование', roles: ALL, icon: 'profile' },
 ];
-const sections = ['Главное', 'Учёт', 'Аналитика', 'Управление', 'Администрирование'];
+const sections = ['Главная', 'Учёт', 'Аналитика', 'Управление', 'Администрирование'];
 
 const roleNames: Record<string, string> = { ADMIN: 'Администратор', FINANCE_MANAGER: 'Финансовый менеджер', DIRECTOR: 'Директор' };
 
@@ -99,7 +98,6 @@ const Dashboard: React.FC = () => {
       case 'profile': return <Profile />;
       case 'users': return <UserManagement />;
       case 'references': return <References />;
-      case 'requests': return <PaymentRequests />;
       case 'approvals': return <PaymentRequests />;
       case 'reports': return <Reports />;
       default: return <DashboardAnalytics onOpenTab={openTab} />;
@@ -152,12 +150,10 @@ const Dashboard: React.FC = () => {
             <div className="topbar-title">{active?.name || 'Обзор'}</div>
           </div>
           <div className="topbar-right">
-            <span className="secure">Защищённая сессия</span>
             <NotificationBell canOpen={canOpen} onOpenTab={openTab} onShowAll={() => setActiveTab('notifications')} />
           </div>
         </header>
         <div className="page-content">{renderPage()}</div>
-        <footer className="app-footer"><span>FinFlow</span><span>Корпоративные финансы, {new Date().getFullYear()}</span></footer>
       </main>
     </div>
   );

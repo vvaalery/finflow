@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 
-const DEMO_EMAIL = 'admin@finflow.local';
-const DEMO_PASSWORD = 'Admin123!';
-
 const LoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,20 +28,33 @@ const LoginForm: React.FC = () => {
           <p className="lead">Управление корпоративными финансами и прогнозирование денежных потоков.</p>
 
           <form onSubmit={handleSubmit}>
-            <label className="field-label">Email
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com" autoComplete="username" required />
+            <label className="field-label">
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                autoComplete="username"
+                required
+              />
             </label>
-            <label className="field-label">Пароль
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Введите пароль" autoComplete="current-password" required />
+            <label className="field-label">
+              Пароль
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Введите пароль"
+                autoComplete="current-password"
+                required
+              />
             </label>
             {error && <div className="inline-error" role="alert" style={{ marginTop: 0 }}>{error}</div>}
-            <button type="submit" className="btn-primary" disabled={isLoading}>{isLoading ? 'Вход…' : 'Войти'}</button>
+            <button type="submit" className="btn-primary" disabled={isLoading}>
+              {isLoading ? 'Вход…' : 'Войти'}
+            </button>
           </form>
-
-          <div className="demo">
-            <span>Демо-доступ: <code>{DEMO_EMAIL}</code></span>
-            <button type="button" className="btn-ghost" onClick={() => { setEmail(DEMO_EMAIL); setPassword(DEMO_PASSWORD); }}>Заполнить</button>
-          </div>
         </div>
       </div>
 

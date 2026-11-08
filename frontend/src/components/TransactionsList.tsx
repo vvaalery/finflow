@@ -41,8 +41,7 @@ const TransactionsList: React.FC = () => {
   const [cfoList, setCfoList] = useState<CFO[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  
-  // Фильтры
+
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -51,7 +50,7 @@ const TransactionsList: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [cfoFilter, setCfoFilter] = useState('all');
-  
+
   const [formData, setFormData] = useState({
     accountId: '',
     type: 'INCOME',
@@ -62,7 +61,14 @@ const TransactionsList: React.FC = () => {
     cfoId: ''
   });
 
-  const canEdit = ['ROLE_ADMIN', 'ROLE_FINANCIAL_MANAGER', 'ROLE_FINANCE_MANAGER', 'ADMIN', 'FINANCIAL_MANAGER', 'FINANCE_MANAGER'].includes(user?.role || '');
+  const canEdit = [
+    'ROLE_ADMIN',
+    'ROLE_FINANCIAL_MANAGER',
+    'ROLE_FINANCE_MANAGER',
+    'ADMIN',
+    'FINANCIAL_MANAGER',
+    'FINANCE_MANAGER'
+  ].includes(user?.role || '');
 
   useEffect(() => {
     const loadAll = async () => {
@@ -118,11 +124,12 @@ const TransactionsList: React.FC = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
         if (cfoList.length === 0) await loadCFO();
       }
-      
+
       const companiesRes = await apiClient.get('/companies', {
         params: { ownerId: user?.id }
       });
       let allTransactions: Transaction[] = [];
+
       for (const company of companiesRes.data) {
         const accountsRes = await apiClient.get(`/accounts?companyId=${company.id}`);
         for (const account of accountsRes.data) {
@@ -134,14 +141,14 @@ const TransactionsList: React.FC = () => {
           allTransactions = [...allTransactions, ...accountTransactions];
         }
       }
-      
+
       for (const t of allTransactions) {
         if (t.cfoId) {
           const foundCfo = cfoList.find(cfo => cfo.id === t.cfoId);
           if (foundCfo) t.cfoName = foundCfo.name;
         }
       }
-      
+
       allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setAllTransactions(allTransactions);
       setFilteredTransactions(allTransactions);
@@ -154,14 +161,16 @@ const TransactionsList: React.FC = () => {
 
   const applyFilters = () => {
     let filtered = [...allTransactions];
+
     if (searchTerm.trim()) {
-      filtered = filtered.filter(t => 
+      filtered = filtered.filter(t =>
         t.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         t.cfoName?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
+
     if (dateFrom) filtered = filtered.filter(t => t.date >= dateFrom);
     if (dateTo) filtered = filtered.filter(t => t.date <= dateTo);
     if (amountMin) filtered = filtered.filter(t => t.amount >= parseFloat(amountMin));
@@ -169,12 +178,19 @@ const TransactionsList: React.FC = () => {
     if (typeFilter !== 'all') filtered = filtered.filter(t => t.transactionType === typeFilter);
     if (categoryFilter !== 'all') filtered = filtered.filter(t => t.category === categoryFilter);
     if (cfoFilter !== 'all') filtered = filtered.filter(t => t.cfoId === cfoFilter);
+
     setFilteredTransactions(filtered);
   };
 
   const resetFilters = () => {
-    setSearchTerm(''); setDateFrom(''); setDateTo(''); setAmountMin(''); setAmountMax('');
-    setTypeFilter('all'); setCategoryFilter('all'); setCfoFilter('all');
+    setSearchTerm('');
+    setDateFrom('');
+    setDateTo('');
+    setAmountMin('');
+    setAmountMax('');
+    setTypeFilter('all');
+    setCategoryFilter('all');
+    setCfoFilter('all');
     setFilteredTransactions(allTransactions);
   };
 
@@ -190,8 +206,17 @@ const TransactionsList: React.FC = () => {
         date: formData.date,
         cfoId: formData.cfoId || null
       });
+
       setShowForm(false);
-      setFormData({ accountId: '', type: 'INCOME', amount: '', category: '', description: '', date: new Date().toISOString().split('T')[0], cfoId: '' });
+      setFormData({
+        accountId: '',
+        type: 'INCOME',
+        amount: '',
+        category: '',
+        description: '',
+        date: new Date().toISOString().split('T')[0],
+        cfoId: ''
+      });
       loadTransactions();
       loadAccounts();
     } catch (error) {
@@ -200,7 +225,10 @@ const TransactionsList: React.FC = () => {
   };
 
   const formatNumber = (num: number) => {
-    return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString('ru-RU', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   };
 
   const uniqueCategories = Array.from(new Set(allTransactions.map(t => t.category).filter(Boolean)));
@@ -208,8 +236,13 @@ const TransactionsList: React.FC = () => {
   const expenseItems = cashFlowItems.filter(item => item.type === 'EXPENSE');
 
   const inputStyle = {
-    width: '100%', padding: '12px 14px', border: '1px solid #d5d9de', borderRadius: '14px',
-    fontSize: '14px', boxSizing: 'border-box' as const, height: '48px'
+    width: '100%',
+    padding: '12px 14px',
+    border: '1px solid #d5d9de',
+    borderRadius: '14px',
+    fontSize: '14px',
+    boxSizing: 'border-box' as const,
+    height: '48px'
   };
 
   return (
@@ -217,95 +250,206 @@ const TransactionsList: React.FC = () => {
       {canEdit && (
         <>
           <div className="flex-between" style={{ marginBottom: '16px' }}>
-            <h2> Новая транзакция</h2>
+            <h2>Новая транзакция</h2>
             <button onClick={() => setShowForm(!showForm)} className="btn-secondary">
               {showForm ? 'Отмена' : 'Показать форму'}
             </button>
           </div>
+
           {showForm && (
             <form onSubmit={createTransaction} className="mb-6">
               <div className="form-grid">
                 <div className="form-group">
                   <label>Счет</label>
-                  <select value={formData.accountId} onChange={(e) => setFormData({ ...formData, accountId: e.target.value })} required style={inputStyle}>
+                  <select
+                    value={formData.accountId}
+                    onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                    required
+                    style={inputStyle}
+                  >
                     <option value="">Выберите счет</option>
-                    {accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.accountName}</option>)}
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>{acc.accountName}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="form-group">
                   <label>Тип</label>
-                  <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value, category: '' })} style={inputStyle}>
-                    <option value="INCOME"> Доход</option>
-                    <option value="EXPENSE"> Расход</option>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value, category: '' })}
+                    style={inputStyle}
+                  >
+                    <option value="INCOME">Доход</option>
+                    <option value="EXPENSE">Расход</option>
                   </select>
                 </div>
+
                 <div className="form-group">
                   <label>Сумма</label>
-                  <input type="number" step="0.01" placeholder="1000.00" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: e.target.value })} required style={inputStyle} />
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="1000.00"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    required
+                    style={inputStyle}
+                  />
                 </div>
+
                 <div className="form-group">
                   <label>Категория</label>
-                  <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} required style={inputStyle}>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    required
+                    style={inputStyle}
+                  >
                     <option value="">Выберите категорию</option>
-                    {(formData.type === 'INCOME' ? incomeItems : expenseItems).map(item => <option key={item.id} value={item.name}>{item.name}</option>)}
+                    {(formData.type === 'INCOME' ? incomeItems : expenseItems).map(item => (
+                      <option key={item.id} value={item.name}>{item.name}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="form-group">
                   <label>ЦФО</label>
-                  <select value={formData.cfoId} onChange={(e) => setFormData({ ...formData, cfoId: e.target.value })} style={inputStyle}>
+                  <select
+                    value={formData.cfoId}
+                    onChange={(e) => setFormData({ ...formData, cfoId: e.target.value })}
+                    style={inputStyle}
+                  >
                     <option value="">Выберите ЦФО</option>
-                    {cfoList.map(cfo => <option key={cfo.id} value={cfo.id}>{cfo.name}</option>)}
+                    {cfoList.map(cfo => (
+                      <option key={cfo.id} value={cfo.id}>{cfo.name}</option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="form-group">
                   <label>Описание</label>
-                  <input type="text" placeholder="Описание операции" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={inputStyle} />
+                  <input
+                    type="text"
+                    placeholder="Описание операции"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    style={inputStyle}
+                  />
                 </div>
+
                 <div className="form-group">
                   <label>Дата</label>
-                  <input type="date" value={formData.date} onChange={(e) => setFormData({ ...formData, date: e.target.value })} style={inputStyle} />
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    style={inputStyle}
+                  />
                 </div>
               </div>
-              <button type="submit" className="btn-primary" style={{ height: '48px' }}> Добавить транзакцию</button>
+
+              <button type="submit" className="btn-primary" style={{ height: '48px' }}>
+                Добавить транзакцию
+              </button>
             </form>
           )}
         </>
       )}
 
-      {/* Фильтры */}
-      <div style={{ marginBottom: '20px', padding: '20px', background: '#f6f7f8', borderRadius: '16px', border: '1px solid #e7e9ec', marginTop: '20px' }}>
+      <div style={{
+        marginBottom: '20px',
+        padding: '20px',
+        background: '#f6f7f8',
+        borderRadius: '16px',
+        border: '1px solid #e7e9ec',
+        marginTop: '20px'
+      }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
           <div style={{ flex: 2, minWidth: '200px' }}>
-            <input type="text" placeholder=" Поиск..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+            <input
+              type="text"
+              placeholder="Поиск..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ ...inputStyle, width: '100%' }}
+            />
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} style={{ ...inputStyle, width: '140px' }} />
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} style={{ ...inputStyle, width: '140px' }} />
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              style={{ ...inputStyle, width: '140px' }}
+            />
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              style={{ ...inputStyle, width: '140px' }}
+            />
           </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
+
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '12px',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...inputStyle, width: '130px', background: 'white' }}>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              style={{ ...inputStyle, width: '130px', background: 'white' }}
+            >
               <option value="all">Все типы</option>
               <option value="INCOME">Доходы</option>
               <option value="EXPENSE">Расходы</option>
             </select>
-            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={{ ...inputStyle, width: '150px', background: 'white' }}>
+
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              style={{ ...inputStyle, width: '150px', background: 'white' }}
+            >
               <option value="all">Все категории</option>
-              {uniqueCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+              {uniqueCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
             </select>
+
             <div style={{ display: 'flex', gap: '8px' }}>
-              <input type="number" placeholder="От" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} style={{ ...inputStyle, width: '100px' }} />
-              <input type="number" placeholder="До" value={amountMax} onChange={(e) => setAmountMax(e.target.value)} style={{ ...inputStyle, width: '100px' }} />
+              <input
+                type="number"
+                placeholder="От"
+                value={amountMin}
+                onChange={(e) => setAmountMin(e.target.value)}
+                style={{ ...inputStyle, width: '100px' }}
+              />
+              <input
+                type="number"
+                placeholder="До"
+                value={amountMax}
+                onChange={(e) => setAmountMax(e.target.value)}
+                style={{ ...inputStyle, width: '100px' }}
+              />
             </div>
           </div>
-          <button onClick={resetFilters} className="btn-secondary" style={{ padding: '0 20px', height: '48px' }}>Сбросить</button>
+
+          <button onClick={resetFilters} className="btn-secondary" style={{ padding: '0 20px', height: '48px' }}>
+            Сбросить
+          </button>
         </div>
       </div>
 
       <div className="mt-4">
-        <h2> История операций</h2>
-        {loading ? <div className="loading">Загрузка...</div> : (
+        <h2>История операций</h2>
+        {loading ? (
+          <div className="loading">Загрузка...</div>
+        ) : (
           <div className="table-wrapper">
             <table>
               <thead>
@@ -314,7 +458,6 @@ const TransactionsList: React.FC = () => {
                   <th>Счет</th>
                   <th>Тип</th>
                   <th>Категория</th>
-                  <th>ЦФО</th>
                   <th>Сумма</th>
                   <th>Описание</th>
                 </tr>
@@ -324,15 +467,15 @@ const TransactionsList: React.FC = () => {
                   const isIncome = t.transactionType === 'INCOME';
                   return (
                     <tr key={t.id}>
-                      <td>{new Date(t.date).toLocaleDateString('ru-RU')}</td>
+                      <td className="date-cell">{new Date(t.date).toLocaleDateString('ru-RU')}</td>
                       <td>{t.accountName || '—'}</td>
-                      <td><span className={isIncome ? 'badge-income' : 'badge-expense'}>{isIncome ? 'Доход' : 'Расход'}</span></td>
+                      <td>
+                        <span className={isIncome ? 'badge-income' : 'badge-expense'}>
+                          {isIncome ? 'Доход' : 'Расход'}
+                        </span>
+                      </td>
                       <td>{t.category || '—'}</td>
-                      <td>{t.cfoName || '—'}</td>
-                      <td 
-                        className={isIncome ? 'amount-positive' : 'amount-negative'} 
-                        style={{ whiteSpace: 'nowrap' }}
-                      >
+                      <td className={`amount-cell ${isIncome ? 'amount-positive' : 'amount-negative'}`}>
                         {isIncome ? '+\u00A0' : '-\u00A0'}{formatNumber(t.amount)}
                       </td>
                       <td>{t.description || '—'}</td>
