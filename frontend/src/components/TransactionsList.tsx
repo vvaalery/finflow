@@ -413,7 +413,7 @@ const TransactionsList: React.FC = () => {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              style={{ ...inputStyle, width: '150px', background: 'white' }}
+              style={{ ...inputStyle, width: '170px', minWidth: '170px', paddingRight: '42px', background: 'white' }}
             >
               <option value="all">Все категории</option>
               {uniqueCategories.map(cat => (
@@ -467,7 +467,11 @@ const TransactionsList: React.FC = () => {
                   const isIncome = t.transactionType === 'INCOME';
                   return (
                     <tr key={t.id}>
-                      <td className="date-cell">{new Date(t.date).toLocaleDateString('ru-RU')}</td>
+                      <td className="date-cell">
+                        <span className="no-wrap-value">
+                          {new Date(t.date).toLocaleDateString('ru-RU')}
+                        </span>
+                      </td>
                       <td>{t.accountName || '—'}</td>
                       <td>
                         <span className={isIncome ? 'badge-income' : 'badge-expense'}>
@@ -476,7 +480,9 @@ const TransactionsList: React.FC = () => {
                       </td>
                       <td>{t.category || '—'}</td>
                       <td className={`amount-cell ${isIncome ? 'amount-positive' : 'amount-negative'}`}>
-                        {isIncome ? '+\u00A0' : '-\u00A0'}{formatNumber(t.amount)}
+                        <span className="no-wrap-value">
+                          {isIncome ? '+\u00A0' : '-\u00A0'}{formatNumber(t.amount)}
+                        </span>
                       </td>
                       <td>{t.description || '—'}</td>
                     </tr>

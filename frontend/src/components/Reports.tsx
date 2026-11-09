@@ -30,8 +30,8 @@ const Reports: React.FC = () => {
   };
 
   const burgundyStyle = {
-    background: 'linear-gradient(135deg, #7b243c 0%, #55172b 100%)',
-    borderColor: '#7b243c',
+    background: 'linear-gradient(135deg, #171717 0%, #303030 100%)',
+    borderColor: '#171717',
     color: '#ffffff'
   };
 

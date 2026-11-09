@@ -216,7 +216,7 @@ const ImportData: React.FC = () => {
                   height: '36px',
                   padding: '0 16px',
                   borderRadius: '9px',
-                  background: 'linear-gradient(135deg, #7b243c 0%, #55172b 100%)',
+                  background: 'linear-gradient(135deg, #171717 0%, #303030 100%)',
                   color: '#ffffff',
                   fontSize: '13px',
                   fontWeight: 600

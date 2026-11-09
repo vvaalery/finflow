@@ -151,11 +151,13 @@ const PaymentRequests: React.FC = () => {
 
                   return (
                     <tr key={req.id}>
-                      <td>
-                        <span style={isOverdue ? { color: '#a4473d', fontWeight: '700' } : {}}>{reqDate.toLocaleDateString('ru-RU')}</span>
-                      </td>
+                      <td className="date-cell">
+                      <span style={isOverdue ? { color: '#a4473d', fontWeight: '700' } : {}}>
+                        {reqDate.toLocaleDateString('ru-RU')}
+                      </span>
+                    </td>
                       <td><strong>{req.title}</strong></td>
-                      <td className="amount-negative">{formatNumber(req.amount)}</td>
+                      <td className="amount-cell amount-negative">{formatNumber(req.amount)}</td>
                       <td>{req.category || '—'}</td>
                       <td>{req.counterparty || '—'}</td>
                       <td>
