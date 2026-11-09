@@ -93,7 +93,7 @@ const CompaniesList: React.FC = () => {
                 width: '100px', 
                 height: '100px', 
                 borderRadius: '14px', 
-                background: 'linear-gradient(135deg, #1f7a5a 0%, #2c8b7e 100%)',
+                background: 'linear-gradient(135deg, #171717 0%, #303030 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

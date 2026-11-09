@@ -310,21 +310,21 @@ const References: React.FC = () => {
         <button
           onClick={() => setActiveSection('cfo')}
           className={activeSection === 'cfo' ? 'btn-primary' : 'btn-secondary'}
-          style={activeSection === 'cfo' ? { background: '#1f7a5a' } : {}}
+          style={activeSection === 'cfo' ? { background: 'linear-gradient(135deg, #171717 0%, #303030 100%)', borderColor: '#171717' } : {}}
         >
            ЦФО
         </button>
         <button
           onClick={() => setActiveSection('cashflow')}
           className={activeSection === 'cashflow' ? 'btn-primary' : 'btn-secondary'}
-          style={activeSection === 'cashflow' ? { background: '#1f7a5a' } : {}}
+          style={activeSection === 'cashflow' ? { background: 'linear-gradient(135deg, #171717 0%, #303030 100%)', borderColor: '#171717' } : {}}
         >
            Статьи ДДС
         </button>
         <button
           onClick={() => setActiveSection('counterparties')}
           className={activeSection === 'counterparties' ? 'btn-primary' : 'btn-secondary'}
-          style={activeSection === 'counterparties' ? { background: '#1f7a5a' } : {}}
+          style={activeSection === 'counterparties' ? { background: 'linear-gradient(135deg, #171717 0%, #303030 100%)', borderColor: '#171717' } : {}}
         >
            Контрагенты
         </button>

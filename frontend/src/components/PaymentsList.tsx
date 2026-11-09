@@ -172,8 +172,8 @@ const PaymentsList: React.FC = () => {
       <div className="flex-between" style={{ marginBottom: '20px' }}>
         <h2> Платежный календарь</h2>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => setViewMode('upcoming')} className="btn-secondary" style={viewMode === 'upcoming' ? { background: '#14513f', color: 'white' } : {}}> Предстоящие </button>
-          <button onClick={() => setViewMode('all')} className="btn-secondary" style={viewMode === 'all' ? { background: '#14513f', color: 'white' } : {}}> Все платежи </button>
+         <button onClick={() => setViewMode('upcoming')} className="btn-secondary" style={viewMode === 'upcoming' ? { background: 'linear-gradient(135deg, #171717 0%, #303030 100%)', borderColor: '#171717', color: '#ffffff' } : {}}> Предстоящие </button>
+        <button onClick={() => setViewMode('all')} className="btn-secondary" style={viewMode === 'all' ? { background: 'linear-gradient(135deg, #171717 0%, #303030 100%)', borderColor: '#171717', color: '#ffffff' } : {}}> Все платежи </button>
         </div>
       </div>
 
