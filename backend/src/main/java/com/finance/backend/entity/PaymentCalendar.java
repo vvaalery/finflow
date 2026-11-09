@@ -18,44 +18,52 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentCalendar {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    
+
     @ManyToOne
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
-    
+
     @Column(name = "title", nullable = false)
     private String title;
-    
+
     @Column(name = "description")
     private String description;
-    
+
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
-    
+
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
-    
+
     @Column(name = "status")
     private String status = "PENDING";
-    
+
     @Column(name = "category")
     private String category;
-    
+
     @Column(name = "counterparty")
     private String counterparty;
-    
+
+    @ManyToOne
+    @JoinColumn(name = "cash_flow_item_id")
+    private ReferenceCashFlowItem cashFlowItem;
+
+    @ManyToOne
+    @JoinColumn(name = "counterparty_id")
+    private ReferenceCounterparty counterpartyRef;
+
     @ManyToOne
     @JoinColumn(name = "created_by")
     private User createdBy;
-    
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-    
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

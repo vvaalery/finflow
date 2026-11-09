@@ -7,6 +7,8 @@ import com.finance.backend.repository.ReferenceCFORepository;
 import com.finance.backend.repository.ReferenceCashFlowItemRepository;
 import com.finance.backend.repository.ReferenceCounterpartyRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,16 +24,19 @@ public class ReferenceController {
     private final ReferenceCounterpartyRepository counterpartyRepository;
 
     @GetMapping("/cfo")
+    @Cacheable("referenceCfo")
     public List<ReferenceCFO> getAllCFO() {
         return cfoRepository.findAll();
     }
 
     @PostMapping("/cfo")
+    @CacheEvict(value = "referenceCfo", allEntries = true)
     public ReferenceCFO createCFO(@RequestBody ReferenceCFO cfo) {
         return cfoRepository.save(cfo);
     }
 
     @PutMapping("/cfo/{id}")
+    @CacheEvict(value = "referenceCfo", allEntries = true)
     public ReferenceCFO updateCFO(@PathVariable UUID id, @RequestBody ReferenceCFO cfoData) {
         ReferenceCFO cfo = cfoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("ЦФО не найден"));
@@ -41,21 +46,25 @@ public class ReferenceController {
     }
 
     @DeleteMapping("/cfo/{id}")
+    @CacheEvict(value = "referenceCfo", allEntries = true)
     public void deleteCFO(@PathVariable UUID id) {
         cfoRepository.deleteById(id);
     }
 
     @GetMapping("/cash-flow-items")
+    @Cacheable("referenceCashFlowItems")
     public List<ReferenceCashFlowItem> getAllCashFlowItems() {
         return cashFlowItemRepository.findAll();
     }
 
     @PostMapping("/cash-flow-items")
+    @CacheEvict(value = "referenceCashFlowItems", allEntries = true)
     public ReferenceCashFlowItem createCashFlowItem(@RequestBody ReferenceCashFlowItem item) {
         return cashFlowItemRepository.save(item);
     }
 
     @PutMapping("/cash-flow-items/{id}")
+    @CacheEvict(value = "referenceCashFlowItems", allEntries = true)
     public ReferenceCashFlowItem updateCashFlowItem(@PathVariable UUID id, @RequestBody ReferenceCashFlowItem itemData) {
         ReferenceCashFlowItem item = cashFlowItemRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Статья ДДС не найдена"));
@@ -66,21 +75,25 @@ public class ReferenceController {
     }
 
     @DeleteMapping("/cash-flow-items/{id}")
+    @CacheEvict(value = "referenceCashFlowItems", allEntries = true)
     public void deleteCashFlowItem(@PathVariable UUID id) {
         cashFlowItemRepository.deleteById(id);
     }
 
     @GetMapping("/counterparties")
+    @Cacheable("referenceCounterparties")
     public List<ReferenceCounterparty> getAllCounterparties() {
         return counterpartyRepository.findAll();
     }
 
     @PostMapping("/counterparties")
+    @CacheEvict(value = "referenceCounterparties", allEntries = true)
     public ReferenceCounterparty createCounterparty(@RequestBody ReferenceCounterparty counterparty) {
         return counterpartyRepository.save(counterparty);
     }
 
     @PutMapping("/counterparties/{id}")
+    @CacheEvict(value = "referenceCounterparties", allEntries = true)
     public ReferenceCounterparty updateCounterparty(@PathVariable UUID id, @RequestBody ReferenceCounterparty counterpartyData) {
         ReferenceCounterparty counterparty = counterpartyRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Контрагент не найден"));
@@ -93,6 +106,7 @@ public class ReferenceController {
     }
 
     @DeleteMapping("/counterparties/{id}")
+    @CacheEvict(value = "referenceCounterparties", allEntries = true)
     public void deleteCounterparty(@PathVariable UUID id) {
         counterpartyRepository.deleteById(id);
     }

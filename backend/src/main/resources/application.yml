@@ -1,8 +1,10 @@
+
 spring:
   graphql:
     graphiql:
       enabled: true
     path: /graphql
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/finance_db?useUnicode=true&characterEncoding=utf8}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -14,6 +16,7 @@ spring:
       max-lifetime: 1800000
       validation-timeout: 5000
       keepalive-time: 30000
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -22,12 +25,26 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+
   jackson:
     encoding: UTF-8
+
   servlet:
     multipart:
       max-file-size: 20MB
       max-request-size: 25MB
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  cache:
+    type: redis
+    redis:
+      time-to-live: 10m
+      cache-null-values: false
+      key-prefix: "finflow::"
 
 server:
   port: ${SERVER_PORT:8443}

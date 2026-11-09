@@ -17,36 +17,44 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Transaction {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-    
+
     @ManyToOne
     @JoinColumn(name = "account_id", nullable = false)
     private Account account;
-    
+
     @Column(name = "transaction_type", nullable = false)
     private String transactionType;
-    
+
     @Column(name = "amount", nullable = false)
     private BigDecimal amount;
-    
+
     @Column(name = "date", nullable = false)
     private LocalDate date;
-    
+
     @Column(name = "description")
     private String description;
-    
+
     @Column(name = "category")
     private String category;
-    
+
     @Column(name = "counterparty")
     private String counterparty;
-    
+
     @Column(name = "cfo_id")
-    private UUID cfoId; 
-    
+    private UUID cfoId;
+
+    @ManyToOne
+    @JoinColumn(name = "cash_flow_item_id")
+    private ReferenceCashFlowItem cashFlowItem;
+
+    @ManyToOne
+    @JoinColumn(name = "counterparty_id")
+    private ReferenceCounterparty counterpartyRef;
+
     @CreationTimestamp
     @Column(name = "created_at")
     private LocalDateTime createdAt;

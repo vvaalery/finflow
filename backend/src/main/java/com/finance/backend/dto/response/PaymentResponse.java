@@ -1,12 +1,14 @@
 package com.finance.backend.dto.response;
 
 import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
 @Data
 public class PaymentResponse {
+
     private UUID id;
     private String title;
     private String description;
@@ -18,4 +20,6 @@ public class PaymentResponse {
     private String companyName;
     private String createdByName;
     private boolean isOverdue;
+    private UUID cashFlowItemId;
+    private UUID counterpartyId;
 }

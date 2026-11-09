@@ -13,6 +13,9 @@ interface Transaction {
   accountName?: string;
   cfoId?: string;
   cfoName?: string;
+  counterparty?: string;
+  counterpartyId?: string;
+  cashFlowItemId?: string;
 }
 
 interface Account {
@@ -32,6 +35,16 @@ interface CFO {
   description: string;
 }
 
+interface Counterparty {
+  id: string;
+  name: string;
+}
+
+interface Company {
+  id: string;
+  ownerId: string;
+}
+
 const TransactionsList: React.FC = () => {
   const { user } = useAuthStore();
   const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
@@ -39,6 +52,7 @@ const TransactionsList: React.FC = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [cashFlowItems, setCashFlowItems] = useState<CashFlowItem[]>([]);
   const [cfoList, setCfoList] = useState<CFO[]>([]);
+  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
@@ -55,7 +69,8 @@ const TransactionsList: React.FC = () => {
     accountId: '',
     type: 'INCOME',
     amount: '',
-    category: '',
+    cashFlowItemId: '',
+    counterpartyId: '',
     description: '',
     date: new Date().toISOString().split('T')[0],
     cfoId: ''
@@ -71,29 +86,47 @@ const TransactionsList: React.FC = () => {
   ].includes(user?.role || '');
 
   useEffect(() => {
-    const loadAll = async () => {
-      await loadAccounts();
-      await loadCashFlowItems();
-      await loadCFO();
-      await loadTransactions();
-    };
-    loadAll();
+    loadInitialData();
   }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [allTransactions, searchTerm, dateFrom, dateTo, amountMin, amountMax, typeFilter, categoryFilter, cfoFilter]);
+  }, [
+    allTransactions,
+    searchTerm,
+    dateFrom,
+    dateTo,
+    amountMin,
+    amountMax,
+    typeFilter,
+    categoryFilter,
+    cfoFilter
+  ]);
+
+  const loadInitialData = async () => {
+    await Promise.all([
+      loadAccounts(),
+      loadCashFlowItems(),
+      loadCFO(),
+      loadCounterparties()
+    ]);
+    await loadTransactions();
+  };
 
   const loadAccounts = async () => {
     try {
-      const companiesRes = await apiClient.get('/companies', {
-        params: { ownerId: user?.id }
-      });
+      const companiesRes = await apiClient.get('/companies');
+      const ownedCompanies: Company[] = companiesRes.data;
+
       let allAccounts: Account[] = [];
-      for (const company of companiesRes.data) {
-        const accountsRes = await apiClient.get(`/accounts?companyId=${company.id}`);
+
+      for (const company of ownedCompanies) {
+        const accountsRes = await apiClient.get('/accounts', {
+          params: { companyId: company.id }
+        });
         allAccounts = [...allAccounts, ...accountsRes.data];
       }
+
       setAccounts(allAccounts);
     } catch (error) {
       console.error('Error loading accounts:', error);
@@ -118,40 +151,52 @@ const TransactionsList: React.FC = () => {
     }
   };
 
+  const loadCounterparties = async () => {
+    try {
+      const response = await apiClient.get('/references/counterparties');
+      setCounterparties(response.data);
+    } catch (error) {
+      console.error('Error loading counterparties:', error);
+    }
+  };
+
   const loadTransactions = async () => {
     try {
-      if (cfoList.length === 0) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        if (cfoList.length === 0) await loadCFO();
-      }
+      const companiesRes = await apiClient.get('/companies');
+      const ownedCompanies: Company[] = companiesRes.data;
 
-      const companiesRes = await apiClient.get('/companies', {
-        params: { ownerId: user?.id }
-      });
-      let allTransactions: Transaction[] = [];
+      let transactions: Transaction[] = [];
 
-      for (const company of companiesRes.data) {
-        const accountsRes = await apiClient.get(`/accounts?companyId=${company.id}`);
+      for (const company of ownedCompanies) {
+        const accountsRes = await apiClient.get('/accounts', {
+          params: { companyId: company.id }
+        });
+
         for (const account of accountsRes.data) {
-          const transRes = await apiClient.get(`/transactions?accountId=${account.id}`);
-          const accountTransactions = transRes.data.map((t: any) => ({
-            ...t,
+          const transRes = await apiClient.get('/transactions', {
+            params: { accountId: account.id }
+          });
+
+          const accountTransactions = transRes.data.map((transaction: Transaction) => ({
+            ...transaction,
             accountName: account.accountName
           }));
-          allTransactions = [...allTransactions, ...accountTransactions];
+
+          transactions = [...transactions, ...accountTransactions];
         }
       }
 
-      for (const t of allTransactions) {
-        if (t.cfoId) {
-          const foundCfo = cfoList.find(cfo => cfo.id === t.cfoId);
-          if (foundCfo) t.cfoName = foundCfo.name;
-        }
-      }
+      transactions = transactions.map(transaction => ({
+        ...transaction,
+        cfoName: cfoList.find(cfo => cfo.id === transaction.cfoId)?.name
+      }));
 
-      allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setAllTransactions(allTransactions);
-      setFilteredTransactions(allTransactions);
+      transactions.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+
+      setAllTransactions(transactions);
+      setFilteredTransactions(transactions);
     } catch (error) {
       console.error('Error loading transactions:', error);
     } finally {
@@ -163,11 +208,12 @@ const TransactionsList: React.FC = () => {
     let filtered = [...allTransactions];
 
     if (searchTerm.trim()) {
-      filtered = filtered.filter(t =>
-        t.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        t.cfoName?.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(transaction =>
+        transaction.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.accountName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.cfoName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.counterparty?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -196,12 +242,23 @@ const TransactionsList: React.FC = () => {
 
   const createTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const selectedItem = cashFlowItems.find(
+      item => item.id === formData.cashFlowItemId
+    );
+    const selectedCounterparty = counterparties.find(
+      item => item.id === formData.counterpartyId
+    );
+
     try {
       await apiClient.post('/transactions', {
         accountId: formData.accountId,
         type: formData.type,
         amount: parseFloat(formData.amount),
-        category: formData.category,
+        category: selectedItem?.name || '',
+        cashFlowItemId: formData.cashFlowItemId,
+        counterparty: selectedCounterparty?.name || '',
+        counterpartyId: formData.counterpartyId || null,
         description: formData.description,
         date: formData.date,
         cfoId: formData.cfoId || null
@@ -212,15 +269,18 @@ const TransactionsList: React.FC = () => {
         accountId: '',
         type: 'INCOME',
         amount: '',
-        category: '',
+        cashFlowItemId: '',
+        counterpartyId: '',
         description: '',
         date: new Date().toISOString().split('T')[0],
         cfoId: ''
       });
-      loadTransactions();
-      loadAccounts();
-    } catch (error) {
+
+      await loadTransactions();
+      await loadAccounts();
+    } catch (error: any) {
       console.error('Error creating transaction:', error);
+      alert(error.response?.data?.message || 'Ошибка при создании транзакции');
     }
   };
 
@@ -231,7 +291,10 @@ const TransactionsList: React.FC = () => {
     });
   };
 
-  const uniqueCategories = Array.from(new Set(allTransactions.map(t => t.category).filter(Boolean)));
+  const uniqueCategories = Array.from(
+    new Set(allTransactions.map(t => t.category).filter(Boolean))
+  );
+
   const incomeItems = cashFlowItems.filter(item => item.type === 'INCOME');
   const expenseItems = cashFlowItems.filter(item => item.type === 'EXPENSE');
 
@@ -263,13 +326,15 @@ const TransactionsList: React.FC = () => {
                   <label>Счет</label>
                   <select
                     value={formData.accountId}
-                    onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                    onChange={e => setFormData({ ...formData, accountId: e.target.value })}
                     required
                     style={inputStyle}
                   >
                     <option value="">Выберите счет</option>
-                    {accounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>{acc.accountName}</option>
+                    {accounts.map(account => (
+                      <option key={account.id} value={account.id}>
+                        {account.accountName}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -278,7 +343,11 @@ const TransactionsList: React.FC = () => {
                   <label>Тип</label>
                   <select
                     value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value, category: '' })}
+                    onChange={e => setFormData({
+                      ...formData,
+                      type: e.target.value,
+                      cashFlowItemId: ''
+                    })}
                     style={inputStyle}
                   >
                     <option value="INCOME">Доход</option>
@@ -291,25 +360,50 @@ const TransactionsList: React.FC = () => {
                   <input
                     type="number"
                     step="0.01"
+                    min="0.01"
                     placeholder="1000.00"
                     value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    onChange={e => setFormData({ ...formData, amount: e.target.value })}
                     required
                     style={inputStyle}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label>Категория</label>
+                  <label>Статья движения денежных средств</label>
                   <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    value={formData.cashFlowItemId}
+                    onChange={e => setFormData({
+                      ...formData,
+                      cashFlowItemId: e.target.value
+                    })}
                     required
                     style={inputStyle}
                   >
-                    <option value="">Выберите категорию</option>
+                    <option value="">Выберите статью</option>
                     {(formData.type === 'INCOME' ? incomeItems : expenseItems).map(item => (
-                      <option key={item.id} value={item.name}>{item.name}</option>
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Контрагент</label>
+                  <select
+                    value={formData.counterpartyId}
+                    onChange={e => setFormData({
+                      ...formData,
+                      counterpartyId: e.target.value
+                    })}
+                    style={inputStyle}
+                  >
+                    <option value="">Не выбран</option>
+                    {counterparties.map(counterparty => (
+                      <option key={counterparty.id} value={counterparty.id}>
+                        {counterparty.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -318,12 +412,14 @@ const TransactionsList: React.FC = () => {
                   <label>ЦФО</label>
                   <select
                     value={formData.cfoId}
-                    onChange={(e) => setFormData({ ...formData, cfoId: e.target.value })}
+                    onChange={e => setFormData({ ...formData, cfoId: e.target.value })}
                     style={inputStyle}
                   >
                     <option value="">Выберите ЦФО</option>
                     {cfoList.map(cfo => (
-                      <option key={cfo.id} value={cfo.id}>{cfo.name}</option>
+                      <option key={cfo.id} value={cfo.id}>
+                        {cfo.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -334,7 +430,7 @@ const TransactionsList: React.FC = () => {
                     type="text"
                     placeholder="Описание операции"
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
                     style={inputStyle}
                   />
                 </div>
@@ -344,7 +440,7 @@ const TransactionsList: React.FC = () => {
                   <input
                     type="date"
                     value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    onChange={e => setFormData({ ...formData, date: e.target.value })}
                     style={inputStyle}
                   />
                 </div>
@@ -372,7 +468,7 @@ const TransactionsList: React.FC = () => {
               type="text"
               placeholder="Поиск..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value)}
               style={{ ...inputStyle, width: '100%' }}
             />
           </div>
@@ -380,13 +476,13 @@ const TransactionsList: React.FC = () => {
             <input
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              onChange={e => setDateFrom(e.target.value)}
               style={{ ...inputStyle, width: '140px' }}
             />
             <input
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              onChange={e => setDateTo(e.target.value)}
               style={{ ...inputStyle, width: '140px' }}
             />
           </div>
@@ -402,7 +498,7 @@ const TransactionsList: React.FC = () => {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             <select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={e => setTypeFilter(e.target.value)}
               style={{ ...inputStyle, width: '130px', background: 'white' }}
             >
               <option value="all">Все типы</option>
@@ -412,12 +508,20 @@ const TransactionsList: React.FC = () => {
 
             <select
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              style={{ ...inputStyle, width: '170px', minWidth: '170px', paddingRight: '42px', background: 'white' }}
+              onChange={e => setCategoryFilter(e.target.value)}
+              style={{
+                ...inputStyle,
+                width: '170px',
+                minWidth: '170px',
+                paddingRight: '42px',
+                background: 'white'
+              }}
             >
               <option value="all">Все категории</option>
-              {uniqueCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+              {uniqueCategories.map(category => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
               ))}
             </select>
 
@@ -426,20 +530,24 @@ const TransactionsList: React.FC = () => {
                 type="number"
                 placeholder="От"
                 value={amountMin}
-                onChange={(e) => setAmountMin(e.target.value)}
+                onChange={e => setAmountMin(e.target.value)}
                 style={{ ...inputStyle, width: '100px' }}
               />
               <input
                 type="number"
                 placeholder="До"
                 value={amountMax}
-                onChange={(e) => setAmountMax(e.target.value)}
+                onChange={e => setAmountMax(e.target.value)}
                 style={{ ...inputStyle, width: '100px' }}
               />
             </div>
           </div>
 
-          <button onClick={resetFilters} className="btn-secondary" style={{ padding: '0 20px', height: '48px' }}>
+          <button
+            onClick={resetFilters}
+            className="btn-secondary"
+            style={{ padding: '0 20px', height: '48px' }}
+          >
             Сбросить
           </button>
         </div>
@@ -458,33 +566,36 @@ const TransactionsList: React.FC = () => {
                   <th>Счет</th>
                   <th>Тип</th>
                   <th>Категория</th>
+                  <th>Контрагент</th>
                   <th>Сумма</th>
                   <th>Описание</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTransactions.map((t) => {
-                  const isIncome = t.transactionType === 'INCOME';
+                {filteredTransactions.map(transaction => {
+                  const isIncome = transaction.transactionType === 'INCOME';
+
                   return (
-                    <tr key={t.id}>
+                    <tr key={transaction.id}>
                       <td className="date-cell">
                         <span className="no-wrap-value">
-                          {new Date(t.date).toLocaleDateString('ru-RU')}
+                          {new Date(transaction.date).toLocaleDateString('ru-RU')}
                         </span>
                       </td>
-                      <td>{t.accountName || '—'}</td>
+                      <td>{transaction.accountName || '—'}</td>
                       <td>
                         <span className={isIncome ? 'badge-income' : 'badge-expense'}>
                           {isIncome ? 'Доход' : 'Расход'}
                         </span>
                       </td>
-                      <td>{t.category || '—'}</td>
+                      <td>{transaction.category || '—'}</td>
+                      <td>{transaction.counterparty || '—'}</td>
                       <td className={`amount-cell ${isIncome ? 'amount-positive' : 'amount-negative'}`}>
                         <span className="no-wrap-value">
-                          {isIncome ? '+\u00A0' : '-\u00A0'}{formatNumber(t.amount)}
+                          {isIncome ? '+\u00A0' : '-\u00A0'}{formatNumber(transaction.amount)}
                         </span>
                       </td>
-                      <td>{t.description || '—'}</td>
+                      <td>{transaction.description || '—'}</td>
                     </tr>
                   );
                 })}
