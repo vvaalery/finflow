@@ -9,6 +9,11 @@ services:
       SPRING_DATASOURCE_PASSWORD: "1111"
       SPRING_DATA_REDIS_HOST: finflow-redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      COMPANY_SERVICE_HOST: company-service
+      COMPANY_SERVICE_PORT: 9090
+      COMPANY_SERVICE_TIMEOUT_MS: 2000
+      COMPANY_SERVICE_MAX_ATTEMPTS: 3
       SERVER_PORT: 8443
       SERVER_SSL_ENABLED: "true"
       SERVER_SSL_KEY_STORE: /app/certs/keystore.p12
@@ -18,8 +23,42 @@ services:
     ports:
       - "8445:8443"
     networks:
-      - default
-      - existing_finance_network
+      - finflow-network
+    restart: unless-stopped
+
+
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: finflow-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  company-service:
+    build: ./company-service
+    environment:
+      DB_URL: jdbc:postgresql://finflow-postgres:5432/finance_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: "1111"
+      GRPC_PORT: 9090
+    networks:
+      - finflow-network
     restart: unless-stopped
 
   frontend:
@@ -28,6 +67,8 @@ services:
       - "5175:80"
     depends_on:
       - backend
+    networks:
+      - finflow-network
     restart: unless-stopped
 
   backup:
@@ -37,16 +78,16 @@ services:
     volumes:
       - backups:/backups
     networks:
-      - existing_finance_network
+      - finflow-network
     command: >-
       sh -c 'while true; do pg_dump -h finflow-postgres -U postgres -d finance_db -Fc -f /backups/finance_db_$$(date +%Y%m%d_%H%M%S).dump; find /backups -type f -mtime +7 -delete; sleep 86400; done'
     restart: unless-stopped
 
 volumes:
   backups:
+  kafka_data:
 
 networks:
-  default:
-  existing_finance_network:
+  finflow-network:
     external: true
-    name: finance-system-final-styled-updated_default
+    name: finflow-network

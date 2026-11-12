@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package finflow.company;
+
+option java_multiple_files = true;
+option java_package = "com.finance.company.grpc";
+option java_outer_classname = "CompanyServiceProto";
+
+service CompanyService {
+  rpc ValidateAccountOwnership (AccountOwnershipRequest)
+      returns (AccountOwnershipResponse);
+}
+
+message AccountOwnershipRequest {
+  string account_id = 1;
+  string company_id = 2;
+}
+
+message AccountOwnershipResponse {
+  bool account_exists = 1;
+  bool belongs_to_company = 2;
+  string message = 3;
+}

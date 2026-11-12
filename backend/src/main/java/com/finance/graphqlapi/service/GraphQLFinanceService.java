@@ -3,11 +3,13 @@ package com.finance.graphqlapi.service;
 import com.finance.backend.entity.*;
 import com.finance.backend.repository.*;
 import com.finance.paymentservice.service.PaymentValidationService;
+import com.finance.kafka.event.PaymentRequestCreatedEvent;
 import com.finance.graphqlapi.dto.GraphQLInput;
 import com.finance.graphqlapi.dto.GraphQLView;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.finance.kafka.outbox.OutboxEventService;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -25,6 +27,7 @@ public class GraphQLFinanceService {
     private final PaymentRequestRepository paymentRequestRepository;
     private final CashFlowForecastRepository forecastRepository;
     private final PaymentValidationService paymentValidationService;
+    private final OutboxEventService outboxEventService;
 
     public List<GraphQLView.UserView> users() { return userRepository.findAll().stream().map(this::user).toList(); }
     public GraphQLView.UserView user(UUID id) { return userRepository.findById(id).map(this::user).orElse(null); }
@@ -65,7 +68,15 @@ public class GraphQLFinanceService {
     public GraphQLView.MutationResult createPaymentRequest(GraphQLInput.PaymentRequestInput input) {
         paymentValidationService.validateAccountOwnership(input.accountId(), input.companyId());
         PaymentRequest p=new PaymentRequest(); p.setAccount(accountRepository.findById(input.accountId()).orElseThrow()); p.setTitle(input.title()); p.setAmount(input.amount()); p.setDate(input.date()); p.setStatus("PENDING"); p.setRequester(input.requester()); p.setCounterparty(input.counterparty()); p.setCategory(input.category()); p.setDescription(input.description());
-        return result(paymentRequestRepository.save(p).getId(), "Платёжная заявка создана");
+        PaymentRequest saved = paymentRequestRepository.save(p);
+        outboxEventService.enqueue(new PaymentRequestCreatedEvent(
+                saved.getId(),
+                saved.getTitle(),
+                saved.getAmount(),
+                saved.getStatus(),
+                saved.getDate()
+        ));
+        return result(saved.getId(), "Платёжная заявка создана");
     }
     public List<GraphQLView.ForecastView> forecasts(UUID companyId) { return forecastRepository.findByCompanyIdOrderByCreatedAtDesc(companyId).stream().map(this::forecast).toList(); }
 

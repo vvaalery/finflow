@@ -1,0 +1,4 @@
+**
+!target/
+!target/backend-3.5.12.jar
+!docker-entrypoint.sh
