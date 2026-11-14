@@ -1,29 +1,47 @@
-import React, { useState } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import apiClient from '../api/client';
 
 const Profile: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
+
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [email, setEmail] = useState(user?.email || '');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
+  useEffect(() => {
+    setFullName(user?.fullName || '');
+    setEmail(user?.email || '');
+  }, [user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      setMessage('Необходимо авторизоваться');
+      return;
+    }
+
     setLoading(true);
     setMessage('');
-    
+
     try {
-      await apiClient.put('/users/profile', { fullName, email });
-      
-      const updatedUser = { ...user, fullName, email };
-      localStorage.setItem('auth-storage', JSON.stringify({ state: { user: updatedUser } }));
-      
-      setMessage(' Профиль успешно обновлён');
-      setTimeout(() => window.location.reload(), 1500);
+      await apiClient.put('/users/profile', {
+        fullName,
+        email
+      });
+
+      setUser({
+        ...user,
+        fullName,
+        email
+      });
+
+      setMessage('Профиль успешно обновлён');
     } catch (error: any) {
-      setMessage(' Ошибка обновления');
+      setMessage('Ошибка обновления');
     } finally {
       setLoading(false);
     }
@@ -31,19 +49,22 @@ const Profile: React.FC = () => {
 
   return (
     <div className="card">
-      <h2> Личный кабинет</h2>
-      
+      <h2>Личный кабинет</h2>
+
       {message && (
-        <div className="message" style={{ 
-          background: message.includes('успешно') ? '#e9f3ee' : '#faf0ee', 
-          color: message.includes('успешно') ? '#1f7a5a' : '#a4473d',
-          borderLeft: `3px solid ${message.includes('успешно') ? '#1f7a5a' : '#e6cdc9'}`,
-          marginBottom: '20px'
-        }}>
+        <div
+          className="message"
+          style={{
+            background: message.includes('успешно') ? '#e9f3ee' : '#faf0ee',
+            color: message.includes('успешно') ? '#1f7a5a' : '#a4473d',
+            borderLeft: `3px solid ${message.includes('успешно') ? '#1f7a5a' : '#e6cdc9'}`,
+            marginBottom: '20px'
+          }}
+        >
           {message}
         </div>
       )}
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-grid">
           <div className="form-group">
@@ -56,7 +77,7 @@ const Profile: React.FC = () => {
               required
             />
           </div>
-          
+
           <div className="form-group">
             <label>Полное имя</label>
             <input
@@ -67,18 +88,21 @@ const Profile: React.FC = () => {
               required
             />
           </div>
-          
+
           <div className="form-group">
             <label>Роль</label>
             <input
               type="text"
               value={user?.role?.replace('ROLE_', '') || ''}
               disabled
-              style={{ background: '#f6f7f8', color: '#7a838d' }}
+              style={{
+                background: '#f6f7f8',
+                color: '#7a838d'
+              }}
             />
           </div>
         </div>
-        
+
         <button
           type="submit"
           disabled={loading}
@@ -87,7 +111,6 @@ const Profile: React.FC = () => {
           {loading ? 'Сохранение...' : 'Сохранить изменения'}
         </button>
       </form>
-      
     </div>
   );
 };
