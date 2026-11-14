@@ -9,9 +9,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-public class FinanceServiceClientMock implements FinanceServiceClient {
+public class FinanceServiceClientImpl implements FinanceServiceClient {
     private final GraphQLFinanceService service;
-    public FinanceServiceClientMock(GraphQLFinanceService service){this.service=service;}
+    public FinanceServiceClientImpl(GraphQLFinanceService service){this.service=service;}
     public List<GraphQLView.UserView> users(){return service.users();} public GraphQLView.UserView user(UUID id){return service.user(id);}
     public List<GraphQLView.CompanyView> companies(){return service.companies();} public GraphQLView.CompanyView company(UUID id){return service.company(id);}
     public List<GraphQLView.AccountView> accounts(UUID id){return service.accounts(id);} public GraphQLView.AccountView account(UUID id){return service.account(id);}
