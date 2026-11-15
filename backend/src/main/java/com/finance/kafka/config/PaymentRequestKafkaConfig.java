@@ -1,13 +1,13 @@
-
 package com.finance.kafka.config;
 
-import com.finance.kafka.event.PaymentRequestCreatedEvent;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
@@ -38,7 +38,7 @@ public class PaymentRequestKafkaConfig {
 
     @Bean
     public DefaultErrorHandler kafkaErrorHandler(
-            KafkaTemplate<String, PaymentRequestCreatedEvent> kafkaTemplate
+            KafkaTemplate<String, Object> kafkaTemplate
     ) {
         DeadLetterPublishingRecoverer recoverer =
                 new DeadLetterPublishingRecoverer(
@@ -54,5 +54,20 @@ public class PaymentRequestKafkaConfig {
                 recoverer,
                 new FixedBackOff(1000L, 3L)
         );
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, Object>
+    kafkaListenerContainerFactory(
+            ConsumerFactory<String, Object> consumerFactory,
+            DefaultErrorHandler kafkaErrorHandler
+    ) {
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(kafkaErrorHandler);
+
+        return factory;
     }
 }

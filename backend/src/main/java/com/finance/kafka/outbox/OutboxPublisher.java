@@ -1,10 +1,10 @@
 package com.finance.kafka.outbox;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.backend.entity.OutboxEvent;
 import com.finance.backend.repository.OutboxEventRepository;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finance.kafka.config.PaymentRequestKafkaConfig;
+import com.finance.kafka.event.PaymentCalendarCreatedEvent;
 import com.finance.kafka.event.PaymentRequestCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 public class OutboxPublisher {
 
     private final OutboxEventRepository repository;
-    private final KafkaTemplate<String, PaymentRequestCreatedEvent> kafkaTemplate;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
     @Scheduled(fixedDelayString = "${app.outbox.poll-interval-ms:5000}")
@@ -42,11 +42,23 @@ public class OutboxPublisher {
 
     private void publish(OutboxEvent event) {
         try {
-            PaymentRequestCreatedEvent payload =
-                    objectMapper.readValue(
-                            event.getPayload(),
-                            PaymentRequestCreatedEvent.class
-                    );
+            Object payload = switch (event.getEventType()) {
+                case "PAYMENT_REQUEST_CREATED" ->
+                        objectMapper.readValue(
+                                event.getPayload(),
+                                PaymentRequestCreatedEvent.class
+                        );
+
+                case "PAYMENT_CALENDAR_CREATED" ->
+                        objectMapper.readValue(
+                                event.getPayload(),
+                                PaymentCalendarCreatedEvent.class
+                        );
+
+                default -> throw new IllegalArgumentException(
+                        "Неизвестный тип события Outbox: " + event.getEventType()
+                );
+            };
 
             kafkaTemplate.send(
                     PaymentRequestKafkaConfig.TOPIC,
@@ -59,12 +71,14 @@ public class OutboxPublisher {
             event.setLastError(null);
 
             log.info(
-                    "Outbox: событие {} опубликовано в Kafka",
-                    event.getId()
+                    "Outbox: событие {} типа {} опубликовано в Kafka",
+                    event.getId(),
+                    event.getEventType()
             );
 
         } catch (Exception e) {
             int attempts = event.getAttempts() + 1;
+
             long delaySeconds = Math.min(
                     300L,
                     5L * (1L << Math.min(attempts - 1, 6))
@@ -76,6 +90,7 @@ public class OutboxPublisher {
             );
 
             String error = e.getMessage();
+
             if (error == null || error.isBlank()) {
                 error = e.getClass().getSimpleName();
             }

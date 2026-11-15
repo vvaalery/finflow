@@ -1,4 +1,3 @@
-
 package com.finance.backend.service;
 
 import com.finance.backend.dto.request.PaymentRequest;
@@ -13,6 +12,8 @@ import com.finance.backend.repository.PaymentCalendarRepository;
 import com.finance.backend.repository.ReferenceCashFlowItemRepository;
 import com.finance.backend.repository.ReferenceCounterpartyRepository;
 import com.finance.backend.repository.UserRepository;
+import com.finance.kafka.event.PaymentCalendarCreatedEvent;
+import com.finance.kafka.outbox.OutboxEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class PaymentCalendarService {
     private final UserRepository userRepository;
     private final ReferenceCashFlowItemRepository cashFlowItemRepository;
     private final ReferenceCounterpartyRepository counterpartyRepository;
+    private final OutboxEventService outboxEventService;
 
     @Transactional
     public PaymentResponse createPayment(PaymentRequest request, UUID userId) {
@@ -89,6 +91,16 @@ public class PaymentCalendarService {
         }
 
         PaymentCalendar saved = paymentRepository.save(payment);
+
+        outboxEventService.enqueue(new PaymentCalendarCreatedEvent(
+                saved.getId(),
+                saved.getCompany().getId(),
+                saved.getTitle(),
+                saved.getAmount(),
+                saved.getStatus(),
+                saved.getDueDate()
+        ));
+
         return mapToResponse(saved);
     }
 
@@ -100,9 +112,14 @@ public class PaymentCalendarService {
     public List<PaymentResponse> getUpcomingPayments(UUID companyId) {
         LocalDate today = LocalDate.now();
         LocalDate endDate = today.plusMonths(1);
-        List<PaymentCalendar> payments = paymentRepository.findByCompanyIdAndDueDateBetween(
-                companyId, today, endDate
-        );
+
+        List<PaymentCalendar> payments =
+                paymentRepository.findByCompanyIdAndDueDateBetween(
+                        companyId,
+                        today,
+                        endDate
+                );
+
         return payments.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -110,7 +127,9 @@ public class PaymentCalendarService {
     public PaymentResponse updateStatus(UUID paymentId, String status) {
         PaymentCalendar payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new RuntimeException("Платеж не найден"));
+
         payment.setStatus(status);
+
         return mapToResponse(paymentRepository.save(payment));
     }
 
@@ -120,12 +139,17 @@ public class PaymentCalendarService {
     }
 
     public BigDecimal getOverdueTotal(UUID companyId) {
-        BigDecimal overdue = paymentRepository.sumOverduePayments(companyId, LocalDate.now());
+        BigDecimal overdue = paymentRepository.sumOverduePayments(
+                companyId,
+                LocalDate.now()
+        );
+
         return overdue != null ? overdue : BigDecimal.ZERO;
     }
 
     private PaymentResponse mapToResponse(PaymentCalendar payment) {
         PaymentResponse response = new PaymentResponse();
+
         response.setId(payment.getId());
         response.setTitle(payment.getTitle());
         response.setDescription(payment.getDescription());
@@ -135,9 +159,13 @@ public class PaymentCalendarService {
         response.setCategory(payment.getCategory());
         response.setCounterparty(payment.getCounterparty());
         response.setCompanyName(payment.getCompany().getName());
+
         response.setCreatedByName(
-                payment.getCreatedBy() != null ? payment.getCreatedBy().getFullName() : null
+                payment.getCreatedBy() != null
+                        ? payment.getCreatedBy().getFullName()
+                        : null
         );
+
         response.setOverdue(
                 payment.getDueDate().isBefore(LocalDate.now())
                         && !"PAID".equals(payment.getStatus())
