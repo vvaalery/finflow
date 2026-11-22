@@ -13,7 +13,7 @@ public class DatabaseConfig {
     public DatabaseConfig() {
         this.url = System.getenv().getOrDefault(
                 "DB_URL",
-                "jdbc:postgresql://localhost:5432/finance_db"
+                "jdbc:postgresql://localhost:5433/company_db"
         );
         this.username = System.getenv().getOrDefault("DB_USERNAME", "postgres");
         this.password = System.getenv().getOrDefault("DB_PASSWORD", "1111");

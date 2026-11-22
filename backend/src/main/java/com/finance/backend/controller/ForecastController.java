@@ -4,6 +4,7 @@ import com.finance.backend.analytics.ForecastMethod;
 import com.finance.backend.analytics.Scenario;
 import com.finance.backend.dto.response.ForecastResponse;
 import com.finance.backend.service.ForecastService;
+import com.finance.internal.security.RestGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,8 @@ import java.util.UUID;
 public class ForecastController {
 
     private final ForecastService forecastService;
+    private final RestGuard guard;
+
     @GetMapping("/generate")
     public ForecastResponse generateForecast(@RequestParam UUID companyId,
                                              @RequestParam(defaultValue = "6") int months,
@@ -25,6 +28,7 @@ public class ForecastController {
                                              @RequestParam(required = false) String scenario,
                                              @RequestParam(required = false) String strategy,
                                              @RequestParam(required = false) Double multiplier) {
+        guard.readCompany(companyId);
         if (method == null && scenario == null) return forecastService.generateForecast(companyId, months, strategy, multiplier);
         ForecastMethod m = ForecastMethod.parse(method != null ? method : strategy);
         Scenario s = scenario != null ? ForecastService.parseScenario(scenario)
@@ -33,14 +37,21 @@ public class ForecastController {
     }
 
     @GetMapping("/latest")
-    public ForecastResponse latest(@RequestParam UUID companyId) { return forecastService.getLatestForecast(companyId); }
+    public ForecastResponse latest(@RequestParam UUID companyId) {
+        guard.readCompany(companyId);
+        return forecastService.getLatestForecast(companyId);
+    }
 
     @GetMapping("/history")
-    public List<ForecastResponse> history(@RequestParam UUID companyId) { return forecastService.getForecastHistory(companyId); }
+    public List<ForecastResponse> history(@RequestParam UUID companyId) {
+        guard.readCompany(companyId);
+        return forecastService.getForecastHistory(companyId);
+    }
 
     @GetMapping("/compare")
     public List<ForecastResponse.ModelScore> compare(@RequestParam UUID companyId,
                                                      @RequestParam(required = false) String method) {
+        guard.readCompany(companyId);
         return forecastService.compareMethods(companyId, ForecastMethod.parse(method));
     }
 }

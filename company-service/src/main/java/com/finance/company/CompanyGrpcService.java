@@ -18,7 +18,11 @@ public class CompanyGrpcService extends CompanyServiceGrpc.CompanyServiceImplBas
     private static final Logger logger =
             Logger.getLogger(CompanyGrpcService.class.getName());
 
-    private final DatabaseConfig database = new DatabaseConfig();
+    private final DatabaseConfig database;
+
+    public CompanyGrpcService(DatabaseConfig database) {
+        this.database = database;
+    }
 
     @Override
     public void validateAccountOwnership(
@@ -33,12 +37,12 @@ public class CompanyGrpcService extends CompanyServiceGrpc.CompanyServiceImplBas
                     SELECT
                         EXISTS (
                             SELECT 1
-                            FROM accounts
+                            FROM accounts_replica
                             WHERE id = ?
                         ) AS account_exists,
                         EXISTS (
                             SELECT 1
-                            FROM accounts
+                            FROM accounts_replica
                             WHERE id = ?
                               AND company_id = ?
                         ) AS belongs_to_company

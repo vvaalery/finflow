@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.UUID;
 
 import static com.finance.internal.security.AccessPolicy.ADMIN;
@@ -169,6 +170,20 @@ public class InternalPaymentService {
 
         r.setStatus(PaymentStatus.APPROVED);
         requests.save(r);
+
+        PaymentCalendar existing = payments.findByCompanyId(account.getCompany().getId()).stream()
+                .filter(c -> Objects.equals(c.getTitle(), r.getTitle())
+                        && c.getAmount() != null && r.getAmount() != null
+                        && c.getAmount().compareTo(r.getAmount()) == 0
+                        && Objects.equals(c.getDueDate(), r.getDate()))
+                .findFirst().orElse(null);
+        if (existing != null) {
+            if (PaymentStatus.PENDING.equals(PaymentStatus.current(existing.getStatus()))) {
+                existing.setStatus(PaymentStatus.APPROVED);
+                payments.save(existing);
+            }
+            return Views.result(r.getId(), "Заявка утверждена, платёж уже есть в календаре");
+        }
 
         PaymentCalendar p = new PaymentCalendar();
         p.setCompany(account.getCompany());

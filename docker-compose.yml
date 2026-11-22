@@ -17,6 +17,24 @@ services:
       - finflow-network
     restart: unless-stopped
 
+  company-postgres:
+    image: postgres:18
+    container_name: finflow-company-postgres
+    environment:
+      POSTGRES_DB: company_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - company_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d company_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: finflow-redis
@@ -69,6 +87,29 @@ services:
       - finflow-network
     restart: unless-stopped
 
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: finflow-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
   finance-service:
     build: ./backend
     environment:
@@ -91,6 +132,26 @@ services:
       redis:
         condition: service_healthy
       auth-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  company-service:
+    build: ./company-service
+    environment:
+      DB_URL: jdbc:postgresql://company-postgres:5432/company_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: "1111"
+      GRPC_PORT: 9090
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ACCOUNT_SNAPSHOT_TOPIC: finflow.accounts.snapshot
+    depends_on:
+      company-postgres:
+        condition: service_healthy
+      kafka:
         condition: service_started
     networks:
       - finflow-network
@@ -118,43 +179,6 @@ services:
           - backend
     restart: unless-stopped
 
-  kafka:
-    image: apache/kafka:4.1.1
-    container_name: finflow-kafka
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      KAFKA_NUM_PARTITIONS: 3
-    volumes:
-      - kafka_data:/var/lib/kafka/data
-    networks:
-      - finflow-network
-    restart: unless-stopped
-
-  company-service:
-    build: ./company-service
-    environment:
-      DB_URL: jdbc:postgresql://finflow-postgres:5432/finance_db
-      DB_USERNAME: postgres
-      DB_PASSWORD: "1111"
-      GRPC_PORT: 9090
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - finflow-network
-    restart: unless-stopped
-
   frontend:
     build: ./frontend
     ports:
@@ -176,14 +200,23 @@ services:
         condition: service_healthy
       auth-postgres:
         condition: service_healthy
+      company-postgres:
+        condition: service_healthy
     networks:
       - finflow-network
     command: >-
-      sh -c 'while true; do pg_dump -h finflow-postgres -U postgres -d finance_db -Fc -f /backups/finance_db_$$(date +%Y%m%d_%H%M%S).dump; pg_dump -h finflow-auth-postgres -U postgres -d auth_db -Fc -f /backups/auth_db_$$(date +%Y%m%d_%H%M%S).dump; find /backups -type f -mtime +7 -delete; sleep 86400; done'
+      sh -c 'while true; do
+      pg_dump -h finflow-postgres -U postgres -d finance_db -Fc -f /backups/finance_db_$$(date +%Y%m%d_%H%M%S).dump;
+      pg_dump -h finflow-auth-postgres -U postgres -d auth_db -Fc -f /backups/auth_db_$$(date +%Y%m%d_%H%M%S).dump;
+      pg_dump -h company-postgres -U postgres -d company_db -Fc -f /backups/company_db_$$(date +%Y%m%d_%H%M%S).dump;
+      find /backups -type f -mtime +7 -delete;
+      sleep 86400;
+      done'
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  company_pgdata:
   redis_data:
   auth_pgdata:
   backups:
