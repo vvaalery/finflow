@@ -10,19 +10,26 @@ import com.finance.backend.repository.CompanyRepository;
 import com.finance.backend.repository.RoleRepository;
 import com.finance.backend.repository.UserRepository;
 import com.finance.backend.repository.TransactionRepository;
+import com.finance.backend.security.UserProjectionService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Configuration
 public class DataInitializer {
+
+    private static UUID id(String email) {
+        return UUID.nameUUIDFromBytes(("finflow-user:" + email).getBytes(StandardCharsets.UTF_8));
+    }
+
     @Bean
     CommandLineRunner seed(RoleRepository roles, UserRepository users, CompanyRepository companies,
-                           AccountRepository accounts, TransactionRepository transactions, PasswordEncoder encoder) {
+                           AccountRepository accounts, TransactionRepository transactions) {
         return args -> {
             Role manager = roles.findByName("FINANCIAL_MANAGER").orElseGet(() -> {
                 Role role = new Role(); role.setName("FINANCIAL_MANAGER"); return roles.save(role);
@@ -37,8 +44,9 @@ public class DataInitializer {
             User administrator = users.findByEmail("admin@finflow.local").orElseGet(() -> {
                 User user = new User();
                 user.setEmail("admin@finflow.local");
+                user.setId(id("admin@finflow.local"));
                 user.setFullName("System Administrator");
-                user.setPasswordHash(encoder.encode("Admin123!"));
+                user.setPasswordHash(UserProjectionService.EXTERNAL_HASH);
                 user.setRole(admin);
                 user.setIsActive(true);
                 return users.save(user);
@@ -46,16 +54,18 @@ public class DataInitializer {
 
             User financeManager = users.findByEmail("manager@finflow.local").orElseGet(User::new);
             financeManager.setEmail("manager@finflow.local");
+            if (financeManager.getId() == null) financeManager.setId(id("manager@finflow.local"));
             financeManager.setFullName("Финансовый менеджер");
-            financeManager.setPasswordHash(encoder.encode("Manager123!"));
+            financeManager.setPasswordHash(UserProjectionService.EXTERNAL_HASH);
             financeManager.setRole(manager);
             financeManager.setIsActive(true);
             users.save(financeManager);
 
             User directorUser = users.findByEmail("director@finflow.local").orElseGet(User::new);
             directorUser.setEmail("director@finflow.local");
+            if (directorUser.getId() == null) directorUser.setId(id("director@finflow.local"));
             directorUser.setFullName("Директор компании");
-            directorUser.setPasswordHash(encoder.encode("Director123!"));
+            directorUser.setPasswordHash(UserProjectionService.EXTERNAL_HASH);
             directorUser.setRole(director);
             directorUser.setIsActive(true);
             users.save(directorUser);

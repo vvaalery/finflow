@@ -1,9 +1,6 @@
-
 spring:
-  graphql:
-    graphiql:
-      enabled: true
-    path: /graphql
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
 
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/finance_db?useUnicode=true&characterEncoding=utf8}
@@ -63,7 +60,7 @@ spring:
         "spring.json.use.type.headers": true
 
 server:
-  port: ${SERVER_PORT:8443}
+  port: ${SERVER_PORT:8080}
   ssl:
     enabled: ${SERVER_SSL_ENABLED:false}
     key-store: ${SERVER_SSL_KEY_STORE:file:./certs/keystore.p12}
@@ -82,9 +79,8 @@ server:
       enabled: true
       force: true
 
-jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-  expiration: ${JWT_EXPIRATION:86400000}
+services:
+  auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
 
 management:
   endpoints:

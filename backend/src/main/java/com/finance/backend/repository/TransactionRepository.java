@@ -14,7 +14,9 @@ import java.util.UUID;
 public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
     List<Transaction> findByAccountIdOrderByDateDesc(UUID accountId);
-    
+
+    boolean existsByAccountId(UUID accountId);
+
     List<Transaction> findByAccountCompanyIdAndDateBetween(UUID companyId, LocalDate start, LocalDate end);
 
     @Query("SELECT SUM(t.amount) FROM Transaction t WHERE t.transactionType = 'INCOME' AND t.date BETWEEN :start AND :end")
