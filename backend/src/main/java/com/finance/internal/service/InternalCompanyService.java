@@ -261,12 +261,25 @@ public class InternalCompanyService {
         if (!oldAccount.getCurrency().equalsIgnoreCase(newAccount.getCurrency())) {
             throw new IllegalArgumentException("Нельзя перенести операцию на счёт с другой валютой");
         }
+
+        UUID previousAccountId = oldAccount.getId();
+        UUID previousCompanyId = oldAccount.getCompany().getId();
         String type = txType(in.transactionType());
+
         directory.applyBalance(oldAccount, signed(t.getTransactionType(), t.getAmount()).negate(), UUID.randomUUID());
         t.setAccount(newAccount);
         apply(t, in, type);
         directory.applyBalance(newAccount, signed(type, t.getAmount()), UUID.randomUUID());
         transactions.save(t);
+
+        UUID companyId = newAccount.getCompany().getId();
+        outbox.enqueue(EventTypes.TRANSACTION_UPDATED, id, companyId,
+                "transactionId", id, "accountId", newAccount.getId(),
+                "previousAccountId", previousAccountId,
+                "previousCompanyId", previousCompanyId.equals(companyId) ? null : previousCompanyId,
+                "type", type, "amount", t.getAmount().toPlainString(), "date", t.getDate(),
+                "balanceAfter", newAccount.getBalance().toPlainString());
+
         return Views.result(id, "Транзакция обновлена");
     }
 
@@ -277,8 +290,19 @@ public class InternalCompanyService {
         Transaction t = transactions.findById(id).orElseThrow(() -> new NoSuchElementException("Транзакция не найдена"));
         Account a = t.getAccount();
         policy.requireWriteCompany(u, a.getCompany());
-        directory.applyBalance(a, signed(t.getTransactionType(), t.getAmount()).negate(), UUID.randomUUID());
+
+        String type = t.getTransactionType();
+        BigDecimal amount = t.getAmount();
+        var date = t.getDate();
+
+        directory.applyBalance(a, signed(type, amount).negate(), UUID.randomUUID());
         transactions.delete(t);
+
+        outbox.enqueue(EventTypes.TRANSACTION_DELETED, id, a.getCompany().getId(),
+                "transactionId", id, "accountId", a.getId(), "type", type,
+                "amount", amount.toPlainString(), "date", date,
+                "balanceAfter", a.getBalance().toPlainString());
+
         return Views.result(id, "Транзакция удалена");
     }
 

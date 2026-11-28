@@ -145,6 +145,7 @@ services:
       FORECAST_SERVICE_URL: http://forecast-service:8082
       SERVER_PORT: 8080
       SERVER_SSL_ENABLED: "false"
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
     depends_on:
       postgres:
         condition: service_healthy
@@ -199,6 +200,7 @@ services:
     environment:
       AUTH_SERVICE_URL: http://auth-service:8081
       FINANCE_SERVICE_URL: http://finance-service:8080
+      FORECAST_SERVICE_URL: http://forecast-service:8082
       SERVER_PORT: 8443
       SERVER_SSL_ENABLED: "true"
       SERVER_SSL_KEY_STORE: /app/certs/keystore.p12
@@ -210,6 +212,7 @@ services:
     depends_on:
       - auth-service
       - finance-service
+      - forecast-service
     networks:
       finflow-network:
         aliases:
@@ -280,9 +283,14 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: "1111"
       SERVER_PORT: 8082
+      FINANCE_SERVICE_URL: http://finance-service:8080
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN is required}
     depends_on:
       forecast-postgres:
         condition: service_healthy
+      kafka:
+        condition: service_started
     networks:
       - finflow-network
     restart: unless-stopped

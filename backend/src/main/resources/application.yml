@@ -107,3 +107,6 @@ management:
     health:
       probes:
         enabled: true
+
+internal:
+  service-token: ${INTERNAL_SERVICE_TOKEN:}

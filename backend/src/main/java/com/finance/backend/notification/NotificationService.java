@@ -1,6 +1,8 @@
 package com.finance.backend.notification;
 
-import com.finance.backend.analytics.*;
+import com.finance.backend.analytics.SeriesAnalyzer;
+import com.finance.backend.analytics.SeriesStats;
+import com.finance.backend.client.ForecastServiceClient;
 import com.finance.backend.entity.Company;
 import com.finance.backend.entity.PaymentCalendar;
 import com.finance.backend.entity.PaymentRequest;
@@ -37,6 +39,7 @@ public class NotificationService {
     private final PaymentCalendarRepository paymentRepository;
     private final PaymentRequestRepository requestRepository;
     private final CashFlowHistoryService historyService;
+    private final ForecastServiceClient forecastService;
     private final PlatformTransactionManager transactionManager;
 
     private final Map<UUID, Long> lastSync = new ConcurrentHashMap<>();
@@ -162,21 +165,28 @@ public class NotificationService {
                     "Нужно минимум " + ForecastService.MIN_HISTORY_MONTHS + " завершённых месяцев операций, сейчас — " + h.months() + ". Импортируйте историю операций.", "import"));
             return;
         }
-        forecastRisk(company, who, h, out);
+        forecastRisk(company, who, out);
         anomalies(cid, who, h, out);
     }
 
-    private void forecastRisk(Company company, String who, CashFlowHistoryService.History h, List<Candidate> out) {
+    private void forecastRisk(Company company, String who, List<Candidate> out) {
         UUID cid = company.getId();
-        ForecastEngine.Result r = ForecastEngine.forecast(ForecastMethod.GRADIENT_BOOSTING, Scenario.BASE, h.inflow(), h.outflow(), h.start(), 3);
-        double balance = historyService.baseCurrencyBalance(cid).doubleValue(), running = balance;
-        YearMonth deficit = null, negativeNet = null;
-        for (ForecastEngine.Point p : r.points()) {
-            running += p.net();
-            if (running < 0 && deficit == null) deficit = p.month();
-            if (p.net() < 0 && negativeNet == null) negativeNet = p.month();
+        ForecastServiceClient.Risk risk;
+        try {
+            risk = forecastService.risk(cid);
+        } catch (RuntimeException e) {
+            org.slf4j.LoggerFactory.getLogger(NotificationService.class)
+                    .warn("Прогнозный риск компании {} не рассчитан: {}", cid, e.getMessage());
+            return;
         }
+
+        if (risk == null) return;
+
+        double balance = risk.balance();
+        YearMonth deficit = risk.deficitMonth() == null ? null : YearMonth.parse(risk.deficitMonth());
+        YearMonth negativeNet = risk.negativeNetMonth() == null ? null : YearMonth.parse(risk.negativeNetMonth());
         String cycle = YearMonth.now().toString();
+
         if (deficit != null) {
             out.add(new Candidate("forecast:deficit:" + cid + ":" + cycle, "FORECAST_RISK", "CRITICAL", who + "Риск нехватки ликвидности",
                     "По прогнозу градиентного бустинга остаток на счетах в BYN станет отрицательным в " + monthName(deficit)

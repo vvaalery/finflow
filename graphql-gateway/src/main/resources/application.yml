@@ -31,5 +31,6 @@ server:
 services:
   auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
   finance-url: ${FINANCE_SERVICE_URL:http://localhost:8080}
+  forecast-url: ${FORECAST_SERVICE_URL:http://localhost:8082}
   connect-timeout-ms: ${SERVICES_CONNECT_TIMEOUT_MS:1000}
   read-timeout-ms: ${SERVICES_READ_TIMEOUT_MS:15000}

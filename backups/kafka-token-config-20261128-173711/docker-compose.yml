@@ -1,0 +1,303 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: finflow-postgres
+    environment:
+      POSTGRES_DB: finance_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d finance_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  company-postgres:
+    image: postgres:18
+    container_name: finflow-company-postgres
+    environment:
+      POSTGRES_DB: company_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - company_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d company_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  audit-postgres:
+    image: postgres:18
+    container_name: finflow-audit-postgres
+    environment:
+      POSTGRES_DB: audit_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - audit_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d audit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: finflow-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  auth-postgres:
+    image: postgres:18
+    container_name: finflow-auth-postgres
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - auth_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      AUTH_DB_URL: jdbc:postgresql://auth-postgres:5432/auth_db
+      AUTH_DB_USER: postgres
+      AUTH_DB_PASSWORD: "1111"
+      SPRING_DATA_REDIS_HOST: finflow-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      SERVER_PORT: 8081
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: finflow-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  finance-service:
+    build: ./backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://finflow-postgres:5432/finance_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "1111"
+      SPRING_DATA_REDIS_HOST: finflow-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      COMPANY_SERVICE_HOST: company-service
+      COMPANY_SERVICE_PORT: 9090
+      COMPANY_SERVICE_TIMEOUT_MS: 2000
+      COMPANY_SERVICE_MAX_ATTEMPTS: 3
+      AUTH_SERVICE_URL: http://auth-service:8081
+      FORECAST_SERVICE_URL: http://forecast-service:8082
+      SERVER_PORT: 8080
+      SERVER_SSL_ENABLED: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      forecast-service:
+        condition: service_started
+      kafka:
+        condition: service_started
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  company-service:
+    build: ./company-service
+    environment:
+      DB_URL: jdbc:postgresql://company-postgres:5432/company_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: "1111"
+      GRPC_PORT: 9090
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      ACCOUNT_SNAPSHOT_TOPIC: finflow.accounts.snapshot
+    depends_on:
+      company-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  audit-service:
+    build: ./audit-service
+    environment:
+      DB_URL: jdbc:postgresql://audit-postgres:5432/audit_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: "1111"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      audit-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  graphql-gateway:
+    build: ./graphql-gateway
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8081
+      FINANCE_SERVICE_URL: http://finance-service:8080
+      SERVER_PORT: 8443
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY_STORE: /app/certs/keystore.p12
+      SERVER_SSL_KEY_STORE_PASSWORD: changeit
+      SERVER_SSL_KEY_STORE_TYPE: PKCS12
+      SERVER_SSL_KEY_ALIAS: finflow
+    ports:
+      - "8445:8443"
+    depends_on:
+      - auth-service
+      - finance-service
+    networks:
+      finflow-network:
+        aliases:
+          - backend
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5175:80"
+    depends_on:
+      - graphql-gateway
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  backup:
+    image: postgres:18
+    environment:
+      PGPASSWORD: "1111"
+    volumes:
+      - backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+      auth-postgres:
+        condition: service_healthy
+      company-postgres:
+        condition: service_healthy
+      forecast-postgres:
+        condition: service_healthy
+    networks:
+      - finflow-network
+    command: >-
+      sh -c 'while true; do
+      pg_dump -h finflow-postgres -U postgres -d finance_db -Fc -f /backups/finance_db_$$(date +%Y%m%d_%H%M%S).dump;
+      pg_dump -h finflow-auth-postgres -U postgres -d auth_db -Fc -f /backups/auth_db_$$(date +%Y%m%d_%H%M%S).dump;
+      pg_dump -h company-postgres -U postgres -d company_db -Fc -f /backups/company_db_$$(date +%Y%m%d_%H%M%S).dump;
+      pg_dump -h forecast-postgres -U postgres -d forecast_db -Fc -f /backups/forecast_db_$$(date +%Y%m%d_%H%M%S).dump;
+      find /backups -type f -mtime +7 -delete;
+      sleep 86400;
+      done'
+    restart: unless-stopped
+
+
+  forecast-postgres:
+    image: postgres:18
+    container_name: finflow-forecast-postgres
+    environment:
+      POSTGRES_DB: forecast_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - forecast_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d forecast_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  forecast-service:
+    build: ./forecast-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://forecast-postgres:5432/forecast_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "1111"
+      SERVER_PORT: 8082
+    depends_on:
+      forecast-postgres:
+        condition: service_healthy
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  company_pgdata:
+  redis_data:
+  audit_pgdata:
+  auth_pgdata:
+  forecast_pgdata:
+  backups:
+  kafka_data:
+
+networks:
+  finflow-network:
+    external: true
+    name: finflow-network

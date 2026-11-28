@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -334,10 +335,13 @@ public class InternalPaymentService {
         BigDecimal projectedNet = BigDecimal.ZERO;
 
         if (BASE_CURRENCY.equalsIgnoreCase(account.getCurrency())) {
-            ForecastResponse latest = forecastService.getLatestForecastOrNull(companyId);
-
-            if (latest != null && latest.getNetCashFlow() != null) {
-                projectedNet = latest.getNetCashFlow().min(BigDecimal.ZERO);
+            try {
+                ForecastResponse latest = forecastService.latestOrNull(companyId);
+                if (latest != null && latest.getNetCashFlow() != null) {
+                    projectedNet = latest.getNetCashFlow().min(BigDecimal.ZERO);
+                }
+            } catch (RestClientException e) {
+                log.warn("Forecast Service недоступен, остаток проверен без прогноза: {}", e.getMessage());
             }
         }
 

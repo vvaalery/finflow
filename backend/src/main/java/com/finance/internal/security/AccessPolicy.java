@@ -1,3 +1,4 @@
+
 package com.finance.internal.security;
 
 import com.finance.backend.entity.Company;
@@ -30,7 +31,7 @@ public class AccessPolicy {
     public boolean isAdmin(User u) { return ADMIN.equals(roleOf(u)); }
     public boolean isDirector(User u) { return DIRECTOR.equals(roleOf(u)); }
     public boolean isManager(User u) { return MANAGER.equals(roleOf(u)); }
-    public boolean canReadAll(User u) { return isAdmin(u) || isDirector(u); }
+    public boolean canReadAll(User u) { return isAdmin(u) || isDirector(u) || isManager(u); }
 
     public void requireRole(User u, String... allowed) {
         if (!Arrays.asList(allowed).contains(roleOf(u))) {
@@ -39,19 +40,19 @@ public class AccessPolicy {
     }
 
     public void requireReadCompany(User u, Company c) {
-        if (!(canReadAll(u) || (isManager(u) && owns(u, c)))) {
+        if (!canReadAll(u)) {
             throw new AccessDeniedException("Нет доступа к данным этой компании");
         }
     }
 
     public void requireWriteCompany(User u, Company c) {
-        if (!(isAdmin(u) || (isManager(u) && owns(u, c)))) {
+        if (!(isAdmin(u) || isManager(u))) {
             throw new AccessDeniedException("Нет прав на изменение данных этой компании");
         }
     }
 
     public boolean owns(User u, Company c) {
-        return c.getOwner() != null && u.getId().equals(c.getOwner().getId());
+        return isManager(u);
     }
 
     private String roleOf(User u) {

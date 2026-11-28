@@ -1,0 +1,35 @@
+spring:
+  graphql:
+    graphiql:
+      enabled: true
+    path: /graphql
+  servlet:
+    multipart:
+      enabled: false
+
+logging:
+  pattern:
+    level: "%5p [corr=%X{correlationId:-}]"
+
+server:
+  port: ${SERVER_PORT:8443}
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:false}
+    key-store: ${SERVER_SSL_KEY_STORE:file:./certs/keystore.p12}
+    key-store-password: ${SERVER_SSL_KEY_STORE_PASSWORD:changeit}
+    key-store-type: ${SERVER_SSL_KEY_STORE_TYPE:PKCS12}
+    key-alias: ${SERVER_SSL_KEY_ALIAS:finflow}
+  compression:
+    enabled: true
+    min-response-size: 1024
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+services:
+  auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  finance-url: ${FINANCE_SERVICE_URL:http://localhost:8080}
+  connect-timeout-ms: ${SERVICES_CONNECT_TIMEOUT_MS:1000}
+  read-timeout-ms: ${SERVICES_READ_TIMEOUT_MS:15000}

@@ -1,4 +1,3 @@
-
 spring:
   application:
     name: forecast-service
@@ -9,6 +8,10 @@ spring:
     password: ${SPRING_DATASOURCE_PASSWORD:1111}
     driver-class-name: org.postgresql.Driver
 
+  sql:
+    init:
+      mode: always
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -18,5 +21,38 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
 
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: finflow-forecast-service
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
 server:
   port: ${SERVER_PORT:8082}
+
+logging:
+  pattern:
+    level: "%5p [corr=%X{correlationId:-}]"
+
+services:
+  finance-url: ${FINANCE_SERVICE_URL:http://localhost:8080}
+  connect-timeout-ms: ${FINANCE_CONNECT_TIMEOUT_MS:1000}
+  read-timeout-ms: ${FINANCE_READ_TIMEOUT_MS:10000}
+  internal-token: ${INTERNAL_SERVICE_TOKEN:}
+
+company-service:
+  host: ${COMPANY_SERVICE_HOST:company-service}
+  port: ${COMPANY_SERVICE_PORT:9090}
+  timeout-ms: ${COMPANY_SERVICE_TIMEOUT_MS:2000}
+  max-attempts: ${COMPANY_SERVICE_MAX_ATTEMPTS:3}
+
+app:
+  outbox:
+    poll-interval-ms: ${OUTBOX_POLL_INTERVAL_MS:5000}

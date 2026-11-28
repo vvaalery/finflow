@@ -128,7 +128,7 @@ public class ExportService {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new RuntimeException("Компания не найдена"));
         
-        ForecastResponse forecast = forecastService.generateForecast(companyId, months, strategy, 1.0);
+        ForecastResponse forecast = forecastService.generate(companyId, months, strategy, null);
         
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Прогноз");
@@ -153,7 +153,7 @@ public class ExportService {
             
             Row row3 = sheet.createRow(rowNum++);
             row3.createCell(0).setCellValue("Период прогноза");
-            row3.createCell(1).setCellValue(months + " месяцев");
+            row3.createCell(1).setCellValue(forecast.getForecastPeriodStart() + " — " + forecast.getForecastPeriodEnd());
             
             Row row4 = sheet.createRow(rowNum++);
             row4.createCell(0).setCellValue("Прогнозируемые доходы");
@@ -169,8 +169,17 @@ public class ExportService {
             
             Row row7 = sheet.createRow(rowNum++);
             row7.createCell(0).setCellValue("Метод прогноза");
-            String methodName = "linearRegression".equals(strategy) ? "Линейная регрессия" : "Скользящее среднее";
-            row7.createCell(1).setCellValue(methodName);
+            row7.createCell(1).setCellValue(forecast.getMethodLabel() != null
+                    ? forecast.getMethodLabel() : String.valueOf(forecast.getStrategyUsed()));
+
+            Row row8 = sheet.createRow(rowNum++);
+            row8.createCell(0).setCellValue("Сценарий");
+            row8.createCell(1).setCellValue(String.valueOf(forecast.getScenario()));
+
+            Row row9 = sheet.createRow(rowNum++);
+            row9.createCell(0).setCellValue("Остаток на конец периода");
+            row9.createCell(1).setCellValue(forecast.getProjectedClosingBalance() == null
+                    ? 0 : forecast.getProjectedClosingBalance().doubleValue());
             
             Row emptyRow = sheet.createRow(rowNum++);
             Row noteRow = sheet.createRow(rowNum++);

@@ -7,45 +7,48 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.math.BigDecimal;
-import java.time.YearMonth;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Component
 public class ForecastServiceClient {
 
     private final RestClient http;
+    private final String internalToken;
 
     public ForecastServiceClient(
             RestClient.Builder builder,
             @Value("${services.forecast-url}") String url,
             @Value("${services.forecast-connect-timeout-ms:1000}") int connectTimeoutMs,
-            @Value("${services.forecast-read-timeout-ms:10000}") int readTimeoutMs
+            @Value("${services.forecast-read-timeout-ms:10000}") int readTimeoutMs,
+            @Value("${internal.service-token:}") String internalToken
     ) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeoutMs);
         factory.setReadTimeout(readTimeoutMs);
 
-        this.http = builder
-                .baseUrl(url)
-                .requestFactory(factory)
-                .build();
+        this.internalToken = internalToken;
+        this.http = builder.baseUrl(url).requestFactory(factory).build();
     }
 
-    public ForecastResponse generate(ForecastRequest request) {
+    public record Command(UUID companyId, Integer months, String method, String scenario) {}
+
+    public record Risk(String deficitMonth, String negativeNetMonth, double balance) {}
+
+    public ForecastResponse generate(UUID companyId, int months, String method, String scenario) {
         return http.post()
                 .uri("/internal/forecasts/generate")
-                .body(request)
+                .header("X-Internal-Token", internalToken)
+                .body(new Command(companyId, months, method, scenario))
                 .retrieve()
                 .body(ForecastResponse.class);
     }
 
-    public List<ForecastResponse.ModelScore> compare(ForecastRequest request) {
+    public List<ForecastResponse.ModelScore> compare(UUID companyId, String method) {
         List<ForecastResponse.ModelScore> result = http.post()
                 .uri("/internal/forecasts/compare")
-                .body(request)
+                .header("X-Internal-Token", internalToken)
+                .body(new Command(companyId, 6, method, "BASE"))
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
 
@@ -54,30 +57,27 @@ public class ForecastServiceClient {
 
     public ForecastResponse latest(UUID companyId) {
         return http.get()
-                .uri("/internal/forecasts/{companyId}/latest", companyId)
+                .uri("/internal/forecasts/{id}/latest", companyId)
+                .header("X-Internal-Token", internalToken)
                 .retrieve()
                 .body(ForecastResponse.class);
     }
 
     public List<ForecastResponse> history(UUID companyId) {
         List<ForecastResponse> result = http.get()
-                .uri("/internal/forecasts/{companyId}/history", companyId)
+                .uri("/internal/forecasts/{id}/history", companyId)
+                .header("X-Internal-Token", internalToken)
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
 
         return result == null ? List.of() : result;
     }
 
-    public record ForecastRequest(
-            UUID companyId,
-            Integer months,
-            String method,
-            String scenario,
-            YearMonth historyStart,
-            double[] inflow,
-            double[] outflow,
-            int excludedOtherCurrency,
-            Map<String, Double> expenseByCategory,
-            BigDecimal baseCurrencyBalance
-    ) {}
+    public Risk risk(UUID companyId) {
+        return http.get()
+                .uri("/internal/forecasts/{id}/risk", companyId)
+                .header("X-Internal-Token", internalToken)
+                .retrieve()
+                .body(Risk.class);
+    }
 }

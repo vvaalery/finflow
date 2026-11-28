@@ -3,7 +3,6 @@ package com.finance.internal.controller;
 import com.finance.internal.dto.GraphQLInput.*;
 import com.finance.internal.dto.GraphQLView.*;
 import com.finance.internal.service.InternalCompanyService;
-import com.finance.internal.service.InternalForecastService;
 import com.finance.internal.service.InternalPaymentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,6 @@ import java.util.UUID;
 public class InternalApiController {
     private final InternalCompanyService companies;
     private final InternalPaymentService payments;
-    private final InternalForecastService forecasts;
 
     @GetMapping("/companies")
     public List<CompanyView> companies() {
@@ -162,13 +160,4 @@ public class InternalApiController {
         return payments.rejectPaymentRequest(id);
     }
 
-    @GetMapping("/forecasts")
-    public List<ForecastView> forecasts(@RequestParam UUID companyId) {
-        return forecasts.forecasts(companyId);
-    }
-
-    @PostMapping("/forecasts/generate")
-    public ForecastResultView generateForecast(@Valid @RequestBody GenerateForecastInput body) {
-        return forecasts.generate(body);
-    }
 }

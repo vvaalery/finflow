@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Component
-public class FinanceServiceHttpClient implements CompanyServiceClient, PaymentServiceClient, ForecastServiceClient {
+public class FinanceServiceHttpClient implements CompanyServiceClient, PaymentServiceClient {
     private static final String API = "/internal/v1";
     private final RestClient http;
     private final ObjectMapper mapper;
@@ -86,8 +86,4 @@ public class FinanceServiceHttpClient implements CompanyServiceClient, PaymentSe
     @Override public MutationResult approvePaymentRequest(UUID id) { return send(HttpMethod.POST, "/payment-requests/{id}/approve", null, id); }
     @Override public MutationResult rejectPaymentRequest(UUID id) { return send(HttpMethod.POST, "/payment-requests/{id}/reject", null, id); }
 
-    @Override public List<ForecastView> forecasts(UUID companyId) { return getList("/forecasts?companyId={c}", new ParameterizedTypeReference<List<ForecastView>>() {}, companyId); }
-    @Override public ForecastResultView generateForecast(GenerateForecastInput input) {
-        return ServiceCall.run(mapper, () -> http.post().uri(API + "/forecasts/generate").body(input).retrieve().body(ForecastResultView.class));
-    }
 }
