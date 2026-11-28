@@ -27,6 +27,9 @@ public class PaymentCalendar {
     @JoinColumn(name = "company_id", nullable = false)
     private Company company;
 
+    @Column(name = "payment_request_id", unique = true)
+    private UUID paymentRequestId;
+
     @Column(name = "title", nullable = false)
     private String title;
 

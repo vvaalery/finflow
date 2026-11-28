@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-@org.springframework.context.annotation.Profile("!mock")
 @Component
 public class AuthServiceHttpClient implements AuthServiceClient {
     private final RestClient http;

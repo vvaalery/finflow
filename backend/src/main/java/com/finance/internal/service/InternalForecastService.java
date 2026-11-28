@@ -13,6 +13,8 @@ import com.finance.internal.dto.GraphQLView.ForecastPointView;
 import com.finance.internal.dto.GraphQLView.ForecastResultView;
 import com.finance.internal.dto.GraphQLView.ForecastView;
 import com.finance.internal.security.AccessPolicy;
+import com.finance.kafka.event.EventTypes;
+import com.finance.kafka.outbox.OutboxEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ public class InternalForecastService {
     private final CashFlowForecastRepository forecasts;
     private final CompanyRepository companies;
     private final ForecastService forecastService;
+    private final OutboxEventService outbox;
     private final AccessPolicy policy;
 
     @Transactional(readOnly = true)
@@ -35,13 +38,18 @@ public class InternalForecastService {
         User u = policy.currentUser();
         Company c = company(companyId);
         policy.requireReadCompany(u, c);
-        return forecasts.findByCompanyIdOrderByCreatedAtDesc(c.getId()).stream().map(Views::forecast).toList();
+        return forecasts.findByCompanyIdOrderByCreatedAtDesc(c.getId())
+                .stream()
+                .map(Views::forecast)
+                .toList();
     }
 
+    @Transactional
     public ForecastResultView generate(GenerateForecastInput in) {
         User u = policy.currentUser();
         Company c = company(in.companyId());
         policy.requireReadCompany(u, c);
+
         int months = in.months() == null ? 6 : in.months();
         ForecastResponse r = forecastService.generateForecast(c.getId(), months,
                 ForecastMethod.parse(in.method()), ForecastService.parseScenario(in.scenario()));
@@ -49,6 +57,11 @@ public class InternalForecastService {
         List<ForecastPointView> items = r.getItems().stream().map(this::point).toList();
         var start = r.getItems().get(0).getDate();
         var end = YearMonth.from(r.getItems().get(r.getItems().size() - 1).getDate()).atEndOfMonth();
+
+        outbox.enqueue(EventTypes.FORECAST_GENERATED, r.getId(), c.getId(),
+                "forecastId", r.getId(), "method", r.getMethod(), "scenario", r.getScenario(),
+                "months", months, "reason", "user-request");
+
         return new ForecastResultView(r.getId(), c.getId(), r.getMethod(), r.getScenario(), start, end,
                 r.getTotalProjectedInflow(), r.getTotalProjectedOutflow(), r.getNetCashFlow(),
                 r.getCurrentBalance(), r.getProjectedClosingBalance(), items, r.getWarnings());
@@ -61,6 +74,7 @@ public class InternalForecastService {
     }
 
     private Company company(UUID id) {
-        return companies.findById(id).orElseThrow(() -> new NoSuchElementException("Компания не найдена"));
+        return companies.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Компания не найдена"));
     }
 }

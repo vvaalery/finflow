@@ -10,6 +10,8 @@ import com.finance.backend.repository.AccountRepository;
 import com.finance.backend.repository.ReferenceCashFlowItemRepository;
 import com.finance.backend.repository.ReferenceCounterpartyRepository;
 import com.finance.backend.repository.TransactionRepository;
+import com.finance.kafka.event.EventTypes;
+import com.finance.kafka.outbox.OutboxEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,8 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final ReferenceCashFlowItemRepository cashFlowItemRepository;
     private final ReferenceCounterpartyRepository counterpartyRepository;
+    private final CompanyDirectoryService directory;
+    private final OutboxEventService outbox;
 
     @Transactional
     public TransactionResponse createTransaction(TransactionRequest request) {
@@ -88,15 +92,19 @@ public class TransactionService {
             transaction.setCounterparty(request.getCounterparty());
         }
 
-        if ("INCOME".equals(request.getType())) {
-            account.setBalance(account.getBalance().add(request.getAmount()));
-        } else if ("EXPENSE".equals(request.getType())) {
-            account.setBalance(account.getBalance().subtract(request.getAmount()));
+        Transaction saved = transactionRepository.saveAndFlush(transaction);
+
+        boolean income = "INCOME".equals(request.getType());
+        boolean expense = "EXPENSE".equals(request.getType());
+        if (income || expense) {
+            directory.applyBalance(account, income ? request.getAmount() : request.getAmount().negate(), saved.getId());
         }
 
-        accountRepository.save(account);
+        outbox.enqueue(EventTypes.TRANSACTION_CREATED, saved.getId(), account.getCompany().getId(),
+                "transactionId", saved.getId(), "accountId", account.getId(), "type", request.getType(),
+                "amount", request.getAmount().toPlainString(), "date", saved.getDate(),
+                "balanceAfter", account.getBalance().toPlainString());
 
-        Transaction saved = transactionRepository.save(transaction);
         return mapToResponse(saved);
     }
 

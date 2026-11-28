@@ -51,13 +51,19 @@ public class ApiProxyController {
                 }));
         if (body.length > 0) spec.body(body);
 
-        return spec.exchange((req, res) -> {
-            HttpHeaders out = new HttpHeaders();
-            FORWARDED_RESPONSE_HEADERS.forEach(name -> {
-                String value = res.getHeaders().getFirst(name);
-                if (value != null) out.set(name, value);
+        try {
+            return spec.exchange((req, res) -> {
+                HttpHeaders out = new HttpHeaders();
+                FORWARDED_RESPONSE_HEADERS.forEach(name -> {
+                    String value = res.getHeaders().getFirst(name);
+                    if (value != null) out.set(name, value);
+                });
+                return ResponseEntity.status(res.getStatusCode()).headers(out).body(StreamUtils.copyToByteArray(res.getBody()));
             });
-            return ResponseEntity.status(res.getStatusCode()).headers(out).body(StreamUtils.copyToByteArray(res.getBody()));
-        });
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.GATEWAY_TIMEOUT)
+                    .body("{\"error\":\"GATEWAY_TIMEOUT\",\"message\":\"Внутренний сервис не ответил вовремя\"}"
+                            .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        }
     }
 }

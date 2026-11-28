@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-@org.springframework.context.annotation.Profile("!mock")
 @Component
 public class FinanceServiceHttpClient implements CompanyServiceClient, PaymentServiceClient, ForecastServiceClient {
     private static final String API = "/internal/v1";

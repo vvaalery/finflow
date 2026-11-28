@@ -8,10 +8,13 @@ import org.springframework.data.repository.query.Param;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface PaymentCalendarRepository extends JpaRepository<PaymentCalendar, UUID> {
     List<PaymentCalendar> findByCompanyId(UUID companyId);
+
+    Optional<PaymentCalendar> findByPaymentRequestId(UUID paymentRequestId);
 
     List<PaymentCalendar> findByCompanyIdAndDueDateBetween(UUID companyId, LocalDate start, LocalDate end);
 

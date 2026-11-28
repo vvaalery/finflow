@@ -35,6 +35,24 @@ services:
       - finflow-network
     restart: unless-stopped
 
+  audit-postgres:
+    image: postgres:18
+    container_name: finflow-audit-postgres
+    environment:
+      POSTGRES_DB: audit_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - audit_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d audit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     container_name: finflow-redis
@@ -157,6 +175,22 @@ services:
       - finflow-network
     restart: unless-stopped
 
+  audit-service:
+    build: ./audit-service
+    environment:
+      DB_URL: jdbc:postgresql://audit-postgres:5432/audit_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: "1111"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      audit-postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
   graphql-gateway:
     build: ./graphql-gateway
     environment:
@@ -218,6 +252,7 @@ volumes:
   postgres_data:
   company_pgdata:
   redis_data:
+  audit_pgdata:
   auth_pgdata:
   backups:
   kafka_data:

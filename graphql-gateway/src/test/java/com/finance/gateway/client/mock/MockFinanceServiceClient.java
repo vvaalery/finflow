@@ -6,9 +6,7 @@ import com.finance.gateway.client.PaymentServiceClient;
 import com.finance.gateway.security.AuthenticatedUser;
 import com.finance.graphqlapi.dto.GraphQLInput.*;
 import com.finance.graphqlapi.dto.GraphQLView.*;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,8 +14,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component
-@Profile("mock")
 public class MockFinanceServiceClient implements CompanyServiceClient, PaymentServiceClient, ForecastServiceClient {
     private final Map<UUID, CompanyView> companies = new ConcurrentHashMap<>();
     private final Map<UUID, AccountView> accounts = new ConcurrentHashMap<>();

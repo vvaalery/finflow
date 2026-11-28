@@ -4,9 +4,7 @@ import com.finance.gateway.client.AuthServiceClient;
 import com.finance.graphqlapi.dto.GraphQLView.AuthPayload;
 import com.finance.graphqlapi.dto.GraphQLView.RoleView;
 import com.finance.graphqlapi.dto.GraphQLView.UserView;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -16,8 +14,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component
-@Profile("mock")
 public class MockAuthServiceClient implements AuthServiceClient {
     private final Map<String, UserView> byEmail = new ConcurrentHashMap<>();
     private final Map<String, String> passwords = new ConcurrentHashMap<>();

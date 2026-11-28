@@ -1,6 +1,7 @@
 package com.finance.gateway.security;
 
 import com.finance.gateway.client.AuthServiceClient;
+import com.finance.gateway.logging.Correlation;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,8 +40,10 @@ public class SessionAuthenticationFilter extends OncePerRequestFilter {
             try {
                 auth.validate(token).filter(u -> u.isActive() && u.role() != null).ifPresent(user -> {
                     var principal = new AuthenticatedUser(user, token);
-                    SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                            principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name()))));
+                    var authentication = new UsernamePasswordAuthenticationToken(
+                            principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + user.role().name())));
+                    authentication.setDetails(org.slf4j.MDC.get(Correlation.MDC_KEY));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 });
             } catch (RuntimeException e) {
                 log.warn("Не удалось проверить сессию в Auth Service: {}", e.getMessage());

@@ -8,9 +8,14 @@ import com.finance.backend.repository.AccountRepository;
 import com.finance.backend.repository.CompanyRepository;
 import com.finance.backend.repository.TransactionRepository;
 import com.finance.backend.repository.UserRepository;
+import com.finance.backend.service.CompanyDirectoryService;
 import com.finance.internal.dto.GraphQLInput.*;
 import com.finance.internal.dto.GraphQLView.*;
 import com.finance.internal.security.AccessPolicy;
+import com.finance.kafka.event.EventTypes;
+import com.finance.kafka.outbox.OutboxEventService;
+import com.finance.paymentservice.client.CompanyServiceGateway.AccountDto;
+import com.finance.paymentservice.client.CompanyServiceGateway.CompanyDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
@@ -37,6 +42,8 @@ public class InternalCompanyService {
     private final TransactionRepository transactions;
     private final UserRepository users;
     private final AccessPolicy policy;
+    private final CompanyDirectoryService directory;
+    private final OutboxEventService outbox;
 
     @Transactional(readOnly = true)
     public List<CompanyView> companies() {
@@ -51,7 +58,7 @@ public class InternalCompanyService {
         User u = policy.currentUser();
         return companies.findById(id).map(c -> {
             policy.requireReadCompany(u, c);
-            return Views.company(c);
+            return Views.company(directory.syncCompany(c));
         }).orElse(null);
     }
 
@@ -64,12 +71,10 @@ public class InternalCompanyService {
             if (!policy.isAdmin(u)) throw new AccessDeniedException("Нельзя создавать компанию от имени другого пользователя");
             owner = users.findById(ownerId).orElseThrow(() -> new IllegalArgumentException("Владелец не найден"));
         }
-        Company c = new Company();
-        fill(c, in);
-        c.setOwner(owner);
-        c.setStatus("ACTIVE");
+        CompanyDto draft = new CompanyDto(null, in.name(), in.taxId(), in.address(), in.phone(), owner.getId(),
+                in.description(), null, null, "ACTIVE");
         try {
-            return Views.result(companies.saveAndFlush(c).getId(), "Компания создана");
+            return Views.result(directory.createCompany(draft).getId(), "Компания создана");
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Компания с таким УНП уже существует");
         }
@@ -80,9 +85,11 @@ public class InternalCompanyService {
         User u = policy.currentUser();
         policy.requireRole(u, ADMIN, MANAGER);
         Company c = company(id, u, true);
-        fill(c, in);
+        CompanyDto changes = new CompanyDto(c.getId(), in.name(), in.taxId(), in.address(), in.phone(),
+                c.getOwner().getId(), in.description(), c.getWebsiteUrl(), c.getLogoUrl(), c.getStatus());
         try {
-            companies.saveAndFlush(c);
+            directory.updateCompany(c, changes);
+            companies.flush();
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Компания с таким УНП уже существует");
         }
@@ -95,20 +102,11 @@ public class InternalCompanyService {
         policy.requireRole(u, ADMIN);
         Company c = company(id, u, true);
         try {
-            companies.delete(c);
-            companies.flush();
+            directory.deleteCompany(c);
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Нельзя удалить компанию: есть связанные счета, платежи или прогнозы");
         }
         return Views.result(id, "Компания удалена");
-    }
-
-    private void fill(Company c, CompanyInput in) {
-        c.setName(in.name());
-        c.setTaxId(in.taxId());
-        c.setAddress(in.address());
-        c.setPhone(in.phone());
-        c.setDescription(in.description());
     }
 
     @Transactional(readOnly = true)
@@ -123,7 +121,7 @@ public class InternalCompanyService {
         User u = policy.currentUser();
         return accounts.findById(id).map(a -> {
             policy.requireReadCompany(u, a.getCompany());
-            return Views.account(a);
+            return Views.account(directory.syncAccount(a));
         }).orElse(null);
     }
 
@@ -132,14 +130,9 @@ public class InternalCompanyService {
         User u = policy.currentUser();
         policy.requireRole(u, ADMIN, MANAGER);
         Company c = company(in.companyId(), u, true);
-        Account a = new Account();
-        a.setCompany(c);
-        a.setAccountName(in.accountName());
-        a.setAccountType(accountType(in.accountType()));
-        a.setCurrency(currency(in.currency()));
-        a.setBalance(in.balance().setScale(2, RoundingMode.HALF_UP));
-        a.setIsActive(true);
-        return Views.result(accounts.save(a).getId(), "Счёт создан");
+        AccountDto draft = new AccountDto(null, c.getId(), in.accountName(), accountType(in.accountType()),
+                currency(in.currency()), in.balance().setScale(2, RoundingMode.HALF_UP), true);
+        return Views.result(directory.createAccount(draft).getId(), "Счёт создан");
     }
 
     @Transactional
@@ -152,20 +145,20 @@ public class InternalCompanyService {
         }
         String newCurrency = currency(in.currency());
         BigDecimal newBalance = in.balance().setScale(2, RoundingMode.HALF_UP);
-        if (transactions.existsByAccountId(id)) {
+        boolean hasTransactions = transactions.existsByAccountId(id);
+        if (hasTransactions) {
             if (newBalance.compareTo(a.getBalance()) != 0) {
                 throw new IllegalArgumentException("Баланс счёта с операциями меняется только операциями: создайте приход или расход");
             }
             if (!newCurrency.equals(a.getCurrency())) {
                 throw new IllegalArgumentException("Валюту счёта с операциями менять нельзя");
             }
-        } else {
-            a.setBalance(newBalance);
-            a.setCurrency(newCurrency);
         }
-        a.setAccountName(in.accountName());
-        a.setAccountType(accountType(in.accountType()));
-        accounts.save(a);
+        directory.updateAccount(a, in.accountName(), accountType(in.accountType()),
+                hasTransactions ? a.getCurrency() : newCurrency);
+        if (!hasTransactions && newBalance.compareTo(a.getBalance()) != 0) {
+            directory.applyBalance(a, newBalance.subtract(a.getBalance()), UUID.randomUUID());
+        }
         return Views.result(id, "Счёт обновлён");
     }
 
@@ -178,8 +171,7 @@ public class InternalCompanyService {
             throw new IllegalArgumentException("Нельзя удалить счёт, по которому есть операции");
         }
         try {
-            accounts.delete(a);
-            accounts.flush();
+            directory.deleteAccount(a);
         } catch (DataIntegrityViolationException e) {
             throw new IllegalArgumentException("Нельзя удалить счёт: на него ссылаются платёжные заявки");
         }
@@ -249,9 +241,13 @@ public class InternalCompanyService {
         Transaction t = new Transaction();
         t.setAccount(a);
         apply(t, in, type);
-        post(a, type, t.getAmount());
-        accounts.save(a);
-        return Views.result(transactions.save(t).getId(), "Транзакция создана");
+        Transaction saved = transactions.saveAndFlush(t);
+        directory.applyBalance(a, signed(type, t.getAmount()), saved.getId());
+        outbox.enqueue(EventTypes.TRANSACTION_CREATED, saved.getId(), a.getCompany().getId(),
+                "transactionId", saved.getId(), "accountId", a.getId(), "type", type,
+                "amount", t.getAmount().toPlainString(), "date", t.getDate(),
+                "balanceAfter", a.getBalance().toPlainString());
+        return Views.result(saved.getId(), "Транзакция создана");
     }
 
     @Transactional
@@ -266,12 +262,10 @@ public class InternalCompanyService {
             throw new IllegalArgumentException("Нельзя перенести операцию на счёт с другой валютой");
         }
         String type = txType(in.transactionType());
-        unpost(oldAccount, t.getTransactionType(), t.getAmount());
+        directory.applyBalance(oldAccount, signed(t.getTransactionType(), t.getAmount()).negate(), UUID.randomUUID());
         t.setAccount(newAccount);
         apply(t, in, type);
-        post(newAccount, type, t.getAmount());
-        accounts.save(oldAccount);
-        accounts.save(newAccount);
+        directory.applyBalance(newAccount, signed(type, t.getAmount()), UUID.randomUUID());
         transactions.save(t);
         return Views.result(id, "Транзакция обновлена");
     }
@@ -283,10 +277,13 @@ public class InternalCompanyService {
         Transaction t = transactions.findById(id).orElseThrow(() -> new NoSuchElementException("Транзакция не найдена"));
         Account a = t.getAccount();
         policy.requireWriteCompany(u, a.getCompany());
-        unpost(a, t.getTransactionType(), t.getAmount());
-        accounts.save(a);
+        directory.applyBalance(a, signed(t.getTransactionType(), t.getAmount()).negate(), UUID.randomUUID());
         transactions.delete(t);
         return Views.result(id, "Транзакция удалена");
+    }
+
+    private BigDecimal signed(String type, BigDecimal amount) {
+        return "INCOME".equalsIgnoreCase(type) ? amount : amount.negate();
     }
 
     private void apply(Transaction t, TransactionInput in, String type) {
@@ -297,14 +294,6 @@ public class InternalCompanyService {
         t.setCategory(in.category());
         t.setCounterparty(in.counterparty());
         t.setCfoId(in.cfoId());
-    }
-
-    private void post(Account a, String type, BigDecimal amount) {
-        a.setBalance("INCOME".equals(type) ? a.getBalance().add(amount) : a.getBalance().subtract(amount));
-    }
-
-    private void unpost(Account a, String type, BigDecimal amount) {
-        a.setBalance("INCOME".equalsIgnoreCase(type) ? a.getBalance().subtract(amount) : a.getBalance().add(amount));
     }
 
     private BigDecimal sum(List<Transaction> tx, String type) {
