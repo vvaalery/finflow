@@ -1,16 +1,17 @@
+
 package com.finance.internal.service;
 
+import com.finance.backend.dto.response.ForecastResponse;
 import com.finance.backend.entity.Account;
-import com.finance.backend.entity.CashFlowForecast;
 import com.finance.backend.entity.Company;
 import com.finance.backend.entity.PaymentCalendar;
 import com.finance.backend.entity.PaymentRequest;
 import com.finance.backend.entity.User;
 import com.finance.backend.repository.AccountRepository;
-import com.finance.backend.repository.CashFlowForecastRepository;
 import com.finance.backend.repository.CompanyRepository;
 import com.finance.backend.repository.PaymentCalendarRepository;
 import com.finance.backend.repository.PaymentRequestRepository;
+import com.finance.backend.service.ForecastService;
 import com.finance.internal.domain.PaymentStatus;
 import com.finance.internal.dto.GraphQLInput.PaymentInput;
 import com.finance.internal.dto.GraphQLInput.PaymentRequestInput;
@@ -50,7 +51,7 @@ public class InternalPaymentService {
     private final PaymentRequestRepository requests;
     private final CompanyRepository companies;
     private final AccountRepository accounts;
-    private final CashFlowForecastRepository forecasts;
+    private final ForecastService forecastService;
     private final PaymentValidationService validation;
     private final CompanyServiceGateway companyService;
     private final OutboxEventService outbox;
@@ -333,11 +334,11 @@ public class InternalPaymentService {
         BigDecimal projectedNet = BigDecimal.ZERO;
 
         if (BASE_CURRENCY.equalsIgnoreCase(account.getCurrency())) {
-            projectedNet = forecasts.findByCompanyIdOrderByCreatedAtDesc(companyId).stream()
-                    .findFirst()
-                    .map(CashFlowForecast::getNetCashFlow)
-                    .orElse(BigDecimal.ZERO)
-                    .min(BigDecimal.ZERO);
+            ForecastResponse latest = forecastService.getLatestForecastOrNull(companyId);
+
+            if (latest != null && latest.getNetCashFlow() != null) {
+                projectedNet = latest.getNetCashFlow().min(BigDecimal.ZERO);
+            }
         }
 
         BalanceCheckDto check = companyService.checkProjectedBalance(

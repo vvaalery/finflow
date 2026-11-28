@@ -94,6 +94,9 @@ services:
   auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
   auth-connect-timeout-ms: ${AUTH_CONNECT_TIMEOUT_MS:1000}
   auth-read-timeout-ms: ${AUTH_READ_TIMEOUT_MS:3000}
+  forecast-url: ${FORECAST_SERVICE_URL:http://localhost:8082}
+  forecast-connect-timeout-ms: ${FORECAST_CONNECT_TIMEOUT_MS:1000}
+  forecast-read-timeout-ms: ${FORECAST_READ_TIMEOUT_MS:10000}
 
 management:
   endpoints:

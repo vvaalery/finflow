@@ -142,6 +142,7 @@ services:
       COMPANY_SERVICE_TIMEOUT_MS: 2000
       COMPANY_SERVICE_MAX_ATTEMPTS: 3
       AUTH_SERVICE_URL: http://auth-service:8081
+      FORECAST_SERVICE_URL: http://forecast-service:8082
       SERVER_PORT: 8080
       SERVER_SSL_ENABLED: "false"
     depends_on:
@@ -150,6 +151,8 @@ services:
       redis:
         condition: service_healthy
       auth-service:
+        condition: service_started
+      forecast-service:
         condition: service_started
       kafka:
         condition: service_started
@@ -236,6 +239,8 @@ services:
         condition: service_healthy
       company-postgres:
         condition: service_healthy
+      forecast-postgres:
+        condition: service_healthy
     networks:
       - finflow-network
     command: >-
@@ -243,9 +248,43 @@ services:
       pg_dump -h finflow-postgres -U postgres -d finance_db -Fc -f /backups/finance_db_$$(date +%Y%m%d_%H%M%S).dump;
       pg_dump -h finflow-auth-postgres -U postgres -d auth_db -Fc -f /backups/auth_db_$$(date +%Y%m%d_%H%M%S).dump;
       pg_dump -h company-postgres -U postgres -d company_db -Fc -f /backups/company_db_$$(date +%Y%m%d_%H%M%S).dump;
+      pg_dump -h forecast-postgres -U postgres -d forecast_db -Fc -f /backups/forecast_db_$$(date +%Y%m%d_%H%M%S).dump;
       find /backups -type f -mtime +7 -delete;
       sleep 86400;
       done'
+    restart: unless-stopped
+
+
+  forecast-postgres:
+    image: postgres:18
+    container_name: finflow-forecast-postgres
+    environment:
+      POSTGRES_DB: forecast_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1111"
+    volumes:
+      - forecast_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d forecast_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - finflow-network
+    restart: unless-stopped
+
+  forecast-service:
+    build: ./forecast-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://forecast-postgres:5432/forecast_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: "1111"
+      SERVER_PORT: 8082
+    depends_on:
+      forecast-postgres:
+        condition: service_healthy
+    networks:
+      - finflow-network
     restart: unless-stopped
 
 volumes:
@@ -254,6 +293,7 @@ volumes:
   redis_data:
   audit_pgdata:
   auth_pgdata:
+  forecast_pgdata:
   backups:
   kafka_data:
 

@@ -12,7 +12,7 @@ import com.finance.backend.repository.PaymentCalendarRepository;
 import com.finance.backend.repository.ReferenceCashFlowItemRepository;
 import com.finance.backend.repository.ReferenceCounterpartyRepository;
 import com.finance.backend.repository.UserRepository;
-import com.finance.kafka.event.PaymentCalendarCreatedEvent;
+import com.finance.kafka.event.EventTypes;
 import com.finance.kafka.outbox.OutboxEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -92,14 +92,14 @@ public class PaymentCalendarService {
 
         PaymentCalendar saved = paymentRepository.save(payment);
 
-        outboxEventService.enqueue(new PaymentCalendarCreatedEvent(
-                saved.getId(),
-                saved.getCompany().getId(),
-                saved.getTitle(),
-                saved.getAmount(),
-                saved.getStatus(),
-                saved.getDueDate()
-        ));
+        outboxEventService.enqueue(EventTypes.PAYMENT_CALENDAR_CREATED,
+                saved.getId(), saved.getCompany().getId(),
+                "paymentCalendarId", saved.getId(),
+                "paymentRequestId", null,
+                "title", saved.getTitle(),
+                "amount", saved.getAmount().toPlainString(),
+                "status", saved.getStatus(),
+                "dueDate", saved.getDueDate());
 
         return mapToResponse(saved);
     }

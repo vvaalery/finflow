@@ -3,6 +3,7 @@ package com.finance.backend.dto.response;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,10 @@ public class ForecastResponse {
     private List<ModelScore> comparison = new ArrayList<>();
     private List<String> warnings = new ArrayList<>();
     private Map<String, Object> modelParams;
+    private UUID companyId;
+    private LocalDate forecastPeriodStart;
+    private LocalDate forecastPeriodEnd;
+    private LocalDateTime createdAt;
 
     public record HistoryPoint(LocalDate date, BigDecimal inflow, BigDecimal outflow, BigDecimal netCashFlow) {}
 
